@@ -5,20 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mayank Yadav | Platform & DevOps Engineer</title>
   <meta
-    name="description"
-    content="Platform & DevOps Engineer specialising in Kubernetes, Terraform, CI/CD, and scalable cloud systems across AWS and GCP."
+          name="description"
+          content="Platform & DevOps Engineer specialising in Kubernetes, Terraform, CI/CD, cloud automation, and scalable systems across AWS and GCP."
   />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-    rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+          rel="stylesheet"
   />
 
   <style>
     :root {
       --bg: #0f172a;
-      --bg-soft: #111c34;
       --card: #1e293b;
       --card-hover: #243248;
       --text: #e2e8f0;
@@ -27,10 +26,10 @@
       --accent: #38bdf8;
       --accent-dark: #0ea5e9;
       --border: #273449;
-      --success: #22c55e;
-      --max-width: 1120px;
+      --green: #22c55e;
+      --max-width: 1140px;
       --radius: 16px;
-      --shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+      --shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
     }
 
     * {
@@ -45,8 +44,8 @@
       margin: 0;
       font-family: "Inter", sans-serif;
       background:
-        radial-gradient(circle at top right, rgba(56, 189, 248, 0.08), transparent 24%),
-        linear-gradient(180deg, #0b1220 0%, var(--bg) 100%);
+              radial-gradient(circle at top right, rgba(56, 189, 248, 0.08), transparent 25%),
+              linear-gradient(180deg, #0b1220 0%, var(--bg) 100%);
       color: var(--text);
       line-height: 1.65;
     }
@@ -106,7 +105,7 @@
     }
 
     .hero {
-      padding: 88px 0 72px;
+      padding: 88px 0 52px;
     }
 
     .eyebrow {
@@ -133,9 +132,9 @@
 
     .hero p {
       margin: 0;
-      max-width: 820px;
+      max-width: 840px;
       color: var(--muted);
-      font-size: 1.1rem;
+      font-size: 1.08rem;
     }
 
     .hero-actions {
@@ -198,13 +197,40 @@
       font-weight: 600;
     }
 
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 34px;
+    }
+
+    .metric {
+      background: rgba(30, 41, 59, 0.65);
+      border: 1px solid rgba(51, 65, 85, 0.95);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 1.4rem;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
     section {
       padding: 72px 0;
       border-top: 1px solid rgba(39, 52, 73, 0.8);
     }
 
     .section-header {
-      max-width: 760px;
+      max-width: 780px;
       margin-bottom: 28px;
     }
 
@@ -222,10 +248,6 @@
     .grid {
       display: grid;
       gap: 20px;
-    }
-
-    .grid-3 {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .grid-2 {
@@ -263,6 +285,57 @@
       margin-bottom: 0;
     }
 
+    .case-card {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .case-card .stack {
+      margin-top: auto;
+      padding-top: 4px;
+    }
+
+    .card-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .detail-trigger,
+    .repo-link {
+      appearance: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(56, 189, 248, 0.48);
+      border-radius: 10px;
+      background: rgba(56, 189, 248, 0.08);
+      color: #bdeafe;
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.92rem;
+      font-weight: 700;
+      min-height: 42px;
+      padding: 0 14px;
+      transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .detail-trigger:hover,
+    .repo-link:hover {
+      background: rgba(56, 189, 248, 0.16);
+      border-color: rgba(56, 189, 248, 0.75);
+      transform: translateY(-1px);
+    }
+
+    .detail-trigger:focus-visible,
+    .repo-link:focus-visible,
+    .inline-link:focus-visible,
+    .modal-close:focus-visible {
+      outline: 3px solid rgba(56, 189, 248, 0.35);
+      outline-offset: 3px;
+    }
+
     .tag {
       display: inline-block;
       margin-bottom: 14px;
@@ -292,18 +365,173 @@
       font-weight: 600;
     }
 
-    .mini-list {
-      display: grid;
-      gap: 14px;
-    }
-
-    .mini-list .card {
-      padding: 20px;
-    }
-
     .highlight {
       color: var(--text);
       font-weight: 600;
+    }
+
+    .inline-link {
+      color: #bdeafe;
+      font-weight: 700;
+      text-decoration: underline;
+      text-decoration-color: rgba(56, 189, 248, 0.45);
+      text-underline-offset: 3px;
+    }
+
+    .inline-link:hover {
+      color: var(--accent);
+    }
+
+    .more-work {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 20px;
+    }
+
+    .mini-card {
+      background: rgba(30, 41, 59, 0.72);
+      border: 1px solid rgba(51, 65, 85, 0.95);
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .mini-card h3 {
+      margin: 0 0 10px;
+      font-size: 1.02rem;
+    }
+
+    .mini-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .focus-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(2, 6, 23, 0.74);
+      backdrop-filter: blur(10px);
+    }
+
+    .modal.is-open {
+      display: flex;
+    }
+
+    .modal-panel {
+      width: min(920px, 100%);
+      max-height: min(86vh, 820px);
+      overflow: auto;
+      border: 1px solid rgba(100, 116, 139, 0.38);
+      border-radius: 18px;
+      background: #111827;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+    }
+
+    .modal-header {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 24px 26px 18px;
+      background: rgba(17, 24, 39, 0.96);
+      border-bottom: 1px solid rgba(51, 65, 85, 0.85);
+    }
+
+    .modal-header h3 {
+      margin: 8px 0 0;
+      font-size: clamp(1.5rem, 3vw, 2.1rem);
+      line-height: 1.2;
+      letter-spacing: -0.7px;
+    }
+
+    .modal-close {
+      appearance: none;
+      flex: 0 0 auto;
+      width: 40px;
+      height: 40px;
+      border: 1px solid rgba(100, 116, 139, 0.35);
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 1.2rem;
+      line-height: 1;
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+
+    .modal-close:hover {
+      border-color: rgba(56, 189, 248, 0.55);
+      background: rgba(56, 189, 248, 0.12);
+    }
+
+    .modal-body {
+      display: grid;
+      gap: 22px;
+      padding: 24px 26px 28px;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .detail-stat {
+      border: 1px solid rgba(51, 65, 85, 0.9);
+      border-radius: 12px;
+      padding: 14px;
+      background: rgba(15, 23, 42, 0.52);
+    }
+
+    .detail-stat strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+
+    .detail-stat span {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .detail-section h4 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+    }
+
+    .detail-section p,
+    .detail-section li {
+      color: var(--muted);
+      font-size: 0.98rem;
+    }
+
+    .detail-section p {
+      margin: 0;
+    }
+
+    .detail-section ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    body.modal-open {
+      overflow: hidden;
     }
 
     .contact-links {
@@ -334,12 +562,17 @@
       text-align: center;
     }
 
-    @media (max-width: 900px) {
-      .grid-3,
-      .grid-2 {
-        grid-template-columns: 1fr;
+    @media (max-width: 1000px) {
+      .metrics,
+      .grid-2,
+      .more-work,
+      .focus-grid,
+      .detail-grid {
+        grid-template-columns: 1fr 1fr;
       }
+    }
 
+    @media (max-width: 900px) {
       nav {
         flex-direction: column;
         align-items: flex-start;
@@ -351,6 +584,16 @@
 
       .hero {
         padding-top: 64px;
+      }
+    }
+
+    @media (max-width: 700px) {
+      .metrics,
+      .grid-2,
+      .more-work,
+      .focus-grid,
+      .detail-grid {
+        grid-template-columns: 1fr;
       }
     }
 
@@ -366,260 +609,714 @@
       .hero-actions {
         flex-direction: column;
       }
+
+      .modal {
+        padding: 14px;
+      }
+
+      .modal-header,
+      .modal-body {
+        padding-left: 18px;
+        padding-right: 18px;
+      }
     }
   </style>
 </head>
 <body>
-  <header>
+<header>
+  <div class="container">
+    <nav>
+      <a href="#" class="brand">Mayank<span>.dev</span></a>
+      <div class="nav-links">
+        <a href="#featured-work">Case Studies</a>
+        <a href="#more-work">More Work</a>
+        <a href="#focus">Focus Areas</a>
+        <a href="#blog">Notes</a>
+        <a href="#contact">Contact</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
     <div class="container">
-      <nav>
-        <a href="#" class="brand">Mayank<span>.dev</span></a>
-        <div class="nav-links">
-          <a href="#projects">Projects</a>
-          <a href="#case-studies">Case Studies</a>
-          <a href="#blog">Notes</a>
-          <a href="#contact">Contact</a>
+      <div class="eyebrow">Platform Engineering • DevOps • Cloud Infrastructure</div>
+      <h1>Platform &amp; DevOps Engineer | Kubernetes, Terraform &amp; Cloud Systems at Scale</h1>
+      <p>
+        I design and operate scalable cloud platforms across AWS and GCP, specialising in Kubernetes,
+        infrastructure as code, CI/CD automation, and resilient delivery patterns. Experienced in
+        managing multi-cluster environments, improving deployment reliability, and building
+        developer-friendly platforms.
+      </p>
+
+      <div class="hero-actions">
+        <a href="#featured-work" class="btn btn-primary">View Case Studies</a>
+        <a href="#contact" class="btn btn-secondary">Get In Touch</a>
+      </div>
+
+      <div class="badges">
+        <span class="badge">Kubernetes</span>
+        <span class="badge">Terraform</span>
+        <span class="badge">AWS</span>
+        <span class="badge">GCP</span>
+        <span class="badge">ArgoCD</span>
+        <span class="badge">Helm</span>
+        <span class="badge">CI/CD</span>
+        <span class="badge">Platform Engineering</span>
+      </div>
+
+      <div class="metrics">
+        <div class="metric">
+          <strong>13+ Years</strong>
+          <span>DevOps and platform engineering experience</span>
         </div>
-      </nav>
+        <div class="metric">
+          <strong>18+ Clusters</strong>
+          <span>Managed and modernised across GCP environments</span>
+        </div>
+        <div class="metric">
+          <strong>AWS + GCP</strong>
+          <span>Multi-cloud infrastructure and delivery experience</span>
+        </div>
+        <div class="metric">
+          <strong>Kubernetes First</strong>
+          <span>Scaling, upgrades, automation, and GitOps workflows</span>
+        </div>
+      </div>
     </div>
-  </header>
+  </section>
 
-  <main>
-    <section class="hero">
-      <div class="container">
-        <div class="eyebrow">Platform Engineering • DevOps • Cloud Infrastructure</div>
-        <h1>Platform &amp; DevOps Engineer | Kubernetes, Terraform &amp; Cloud Systems at Scale</h1>
+  <section id="featured-work">
+    <div class="container">
+      <div class="section-header">
+        <h2>Featured Case Studies</h2>
         <p>
-          I design and operate scalable cloud platforms across AWS and GCP, specialising in Kubernetes,
-          infrastructure as code, and CI/CD automation. Experienced in managing multi-cluster environments,
-          improving deployment reliability, and building developer-friendly platforms.
+          A shortlist of the strongest examples of platform design, scaling, governance, and delivery
+          automation from production-focused environments.
         </p>
-
-        <div class="hero-actions">
-          <a href="#projects" class="btn btn-primary">View Featured Work</a>
-          <a href="#contact" class="btn btn-secondary">Get In Touch</a>
-        </div>
-
-        <div class="badges">
-          <span class="badge">Kubernetes</span>
-          <span class="badge">Terraform</span>
-          <span class="badge">AWS</span>
-          <span class="badge">GCP</span>
-          <span class="badge">ArgoCD</span>
-          <span class="badge">Helm</span>
-          <span class="badge">CI/CD</span>
-          <span class="badge">Platform Engineering</span>
-        </div>
       </div>
-    </section>
 
-    <section id="projects">
-      <div class="container">
-        <div class="section-header">
-          <h2>Featured Case Studies</h2>
+      <div class="grid grid-2">
+        <article class="card case-card">
+          <span class="tag">Platform Engineering</span>
+          <h3>Multi-Cluster GKE Platform Modernisation</h3>
           <p>
-            A selection of platform, automation, and delivery work focused on scalability, repeatability,
-            and operational resilience.
+            <span class="highlight">Challenge:</span> Managing Kubernetes clusters across multiple GCP
+            projects required heavy manual effort, created inconsistency between environments, and made
+            upgrades harder to execute safely and repeatedly.
           </p>
-        </div>
-
-        <div class="grid grid-3">
-          <article class="card">
-            <span class="tag">Platform Engineering</span>
-            <h3>Multi-Cluster GKE Platform Modernisation</h3>
-            <p>
-              <span class="highlight">Challenge:</span> Managing Kubernetes clusters across multiple GCP
-              projects required significant manual effort and made upgrades harder to standardise safely.
-            </p>
-            <p>
-              <span class="highlight">What I built:</span> Implemented a more repeatable Terraform-based
-              approach for provisioning and managing GKE clusters, improving configuration consistency and
-              making upgrade planning more structured.
-            </p>
-            <p>
-              <span class="highlight">Impact:</span> Reduced operational overhead, improved standardisation,
-              and supported a more scalable cluster management model.
-            </p>
-            <div class="stack">
-              <span>GKE</span>
-              <span>Terraform</span>
-              <span>GCP</span>
-              <span>Kubernetes</span>
-            </div>
-          </article>
-
-          <article class="card">
-            <span class="tag">CI/CD & GitOps</span>
-            <h3>GitOps CI/CD Delivery Platform</h3>
-            <p>
-              <span class="highlight">Challenge:</span> Application delivery needed a more reliable and
-              repeatable deployment model with better visibility, reduced drift, and safer rollout patterns.
-            </p>
-            <p>
-              <span class="highlight">What I built:</span> Designed and supported CI/CD workflows using
-              Jenkins, Helm, and ArgoCD to improve deployment consistency and enable a cleaner GitOps-style
-              delivery approach for Kubernetes workloads.
-            </p>
-            <p>
-              <span class="highlight">Impact:</span> Improved deployment reliability, reduced manual
-              intervention, and made release workflows easier to operate and troubleshoot.
-            </p>
-            <div class="stack">
-              <span>Jenkins</span>
-              <span>ArgoCD</span>
-              <span>Helm</span>
-              <span>Kubernetes</span>
-              <span>Docker</span>
-            </div>
-          </article>
-
-          <article class="card">
-            <span class="tag">Automation & Operations</span>
-            <h3>SlackOps for Incident Triage &amp; Operational Visibility</h3>
-            <p>
-              <span class="highlight">Challenge:</span> Engineers had to switch across multiple tools to
-              investigate failures, fetch logs, and understand recent alerts, slowing down triage.
-            </p>
-            <p>
-              <span class="highlight">What I built:</span> Developed Slack-based operational tooling to
-              surface build failures, retrieve logs, and improve visibility into infrastructure issues directly
-              from chat workflows.
-            </p>
-            <p>
-              <span class="highlight">Impact:</span> Reduced friction during incident response and made
-              common operational checks faster and more accessible for engineers.
-            </p>
-            <div class="stack">
-              <span>Slack API</span>
-              <span>Jenkins</span>
-              <span>Automation</span>
-              <span>Monitoring</span>
-            </div>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section id="case-studies">
-      <div class="container">
-        <div class="section-header">
-          <h2>What I Focus On</h2>
           <p>
-            I work across infrastructure, delivery, and operational workflows with an emphasis on simplicity,
-            resilience, and maintainability.
+            <span class="highlight">What I built:</span> Standardised GKE cluster provisioning with
+            reusable Terraform patterns, added CI checks for formatting, validation, and OPA policy
+            enforcement, and created a controlled blue-green upgrade flow for safer cluster cutovers.
           </p>
-        </div>
-
-        <div class="grid grid-2">
-          <div class="card">
-            <h3>Cloud Platform Engineering</h3>
-            <p>
-              Building and improving shared cloud platforms across AWS and GCP with strong foundations in
-              infrastructure as code, standardisation, and operational readiness.
-            </p>
-          </div>
-
-          <div class="card">
-            <h3>Kubernetes at Scale</h3>
-            <p>
-              Supporting multi-cluster Kubernetes environments with attention to safe upgrades, workload
-              delivery patterns, autoscaling, and platform consistency.
-            </p>
-          </div>
-
-          <div class="card">
-            <h3>Deployment Reliability</h3>
-            <p>
-              Improving release workflows through GitOps, CI/CD guardrails, rollout visibility, and cleaner
-              operational feedback loops.
-            </p>
-          </div>
-
-          <div class="card">
-            <h3>Operational Automation</h3>
-            <p>
-              Reducing repetitive engineering toil through SlackOps, automation scripts, and tools that bring
-              infrastructure visibility closer to the teams using it.
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="interactive">
-      <div class="container">
-        <div class="section-header">
-          <h2>Interactive DevOps Content</h2>
           <p>
-            This section will evolve into hands-on visualisations and engineering walkthroughs that demonstrate
-            real-world platform thinking.
+            <span class="highlight">Impact:</span> Increased standardisation across clusters, improved
+            IaC quality controls, reduced change risk, and enabled safer, more predictable upgrade workflows.
+          </p>
+          <div class="stack">
+            <span>GKE</span>
+            <span>Terraform</span>
+            <span>GitHub Actions</span>
+            <span>OPA</span>
+            <span>GCP</span>
+            <span>Kubernetes</span>
+          </div>
+          <div class="card-actions">
+            <button class="detail-trigger" type="button" data-modal-target="gke-modernisation">
+              View Details
+            </button>
+            <a
+              class="repo-link"
+              href="https://github.com/sremayank/tf-gke-management"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              View Repo
+            </a>
+          </div>
+        </article>
+
+        <article class="card case-card">
+          <span class="tag">Kubernetes Scaling</span>
+          <h3>Event-Driven Autoscaling with KEDA</h3>
+          <p>
+            <span class="highlight">Challenge:</span> Workloads were either over-provisioned during quiet
+            periods or slow to respond when queue-backed demand spiked, making static scaling rules costly
+            and unreliable across production tenants.
+          </p>
+          <p>
+            <span class="highlight">What I built:</span> Designed and rolled out event-driven autoscaling
+            with KEDA and Kubernetes HPA, using queue depth and external demand signals to scale consumers
+            in line with real workload pressure. Added per-tenant scaling policies, max-replica guardrails,
+            and fallback behaviour for delayed or unavailable metrics.
+          </p>
+          <p>
+            <span class="highlight">Impact:</span> Improved responsiveness during traffic spikes, reduced
+            idle compute waste during quiet periods, and made capacity tuning more predictable across
+            multi-tenant workloads.
+          </p>
+          <div class="stack">
+            <span>Kubernetes</span>
+            <span>KEDA</span>
+            <span>Autoscaling</span>
+            <span>Event-driven</span>
+            <span>Redis</span>
+            <span>Multi-tenant</span>
+          </div>
+          <div class="card-actions">
+            <button class="detail-trigger" type="button" data-modal-target="keda-autoscaling">
+              View Details
+            </button>
+            <a
+              class="repo-link"
+              href="https://github.com/sremayank/sremayank.github.io/tree/featured_work/demos/keda-event-driven-autoscaling-demo"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              View Demo Code
+            </a>
+          </div>
+        </article>
+
+        <article class="card case-card">
+          <span class="tag">Cost Optimisation</span>
+          <h3>GKE Scalar – Serverless Cluster Cost Optimisation</h3>
+          <p>
+            <span class="highlight">Challenge:</span> Non-production Kubernetes clusters were running at
+            full capacity outside working hours, leading to unnecessary compute costs.
+          </p>
+          <p>
+            <span class="highlight">What I built:</span> Developed a serverless cost-optimisation system
+            using Cloud Scheduler and Cloud Functions to dynamically resize GKE node pools based on
+            schedules. Packaged the solution as a reusable Terraform module for consistent rollout across
+            environments.
+          </p>
+          <p>
+            <span class="highlight">Impact:</span> Significantly reduced non-production compute spend
+            while maintaining availability during working hours, with a repeatable and low-maintenance approach.
+          </p>
+          <div class="stack">
+            <span>GCP</span>
+            <span>Cloud Scheduler</span>
+            <span>Cloud Functions</span>
+            <span>GKE</span>
+            <span>Terraform</span>
+          </div>
+          <div class="card-actions">
+            <button class="detail-trigger" type="button" data-modal-target="gke-scalar">
+              View Details
+            </button>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="more-work">
+    <div class="container">
+      <div class="section-header">
+        <h2>More Work</h2>
+        <p>
+          Additional engineering work across platform guardrails, operational tooling, and security
+          hardening that supported safer and more maintainable delivery at scale.
+        </p>
+      </div>
+
+      <div class="more-work">
+        <article class="mini-card">
+          <h3>GitOps CI/CD Delivery Platform</h3>
+          <p>
+            Designed and supported Jenkins, Helm, and ArgoCD workflows to make Kubernetes delivery more
+            repeatable, reduce deployment drift, and improve rollout visibility across application teams.
+          </p>
+        </article>
+
+        <article class="mini-card">
+          <h3>ArgoCD Manifest Guardrail &amp; Drift Detection</h3>
+          <p>
+            Built an automated validation system using Cloud Scheduler, Cloud Functions, ephemeral compute,
+            and Python checks to detect configuration conflicts in ArgoCD applications, with alerting via
+            Slack and PagerDuty plus deduplication backed by GCS.
+          </p>
+        </article>
+
+        <article class="mini-card">
+          <h3>SlackOps for Incident Triage &amp; Visibility</h3>
+          <p>
+            Developed Slack-based operational tooling to surface build failures, retrieve logs, and improve
+            visibility into infrastructure issues directly from chat workflows, reducing friction during
+            incident response.
+          </p>
+        </article>
+
+        <article class="mini-card">
+          <h3>Infrastructure Supply Chain Hardening</h3>
+          <p>
+            Implemented pre-commit and CI guardrails including gitleaks secret scanning, SOPS validation,
+            and per-environment GCP KMS key separation to strengthen encrypted configuration handling and
+            reduce risk of secret leakage.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="focus">
+    <div class="container">
+      <div class="section-header">
+        <h2>Focus Areas</h2>
+        <p>
+          I work across infrastructure, delivery, security, and operational automation with an emphasis on
+          resilience, maintainability, and developer experience.
+        </p>
+      </div>
+
+      <div class="focus-grid">
+        <div class="card">
+          <h3>Cloud Platform Engineering</h3>
+          <p>
+            Building and evolving shared cloud platforms across AWS and GCP with strong foundations in
+            standardisation, infrastructure as code, governance, and operational readiness.
           </p>
         </div>
 
         <div class="card">
-          <h3>Interactive Architecture Explorer <span style="color: var(--accent);">(Coming Soon)</span></h3>
+          <h3>Kubernetes Reliability &amp; Scaling</h3>
           <p>
-            A clickable cloud and Kubernetes architecture map showing platform components, delivery flow,
-            failure domains, and the engineering trade-offs behind each layer.
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <section id="blog">
-      <div class="container">
-        <div class="section-header">
-          <h2>Notes &amp; Write-Ups</h2>
-          <p>
-            Short technical posts on Kubernetes, Terraform, cloud delivery, troubleshooting, and platform
-            engineering lessons from real environments.
+            Supporting multi-cluster Kubernetes environments with attention to safe upgrades, workload
+            delivery patterns, autoscaling behaviour, and platform consistency.
           </p>
         </div>
 
-        <div class="mini-list">
-          <article class="card">
-            <h3>Handling Kubernetes Scaling Pitfalls</h3>
-            <p>
-              Lessons from production-style scaling issues, including autoscaling edge cases, workload
-              behaviour, and the importance of observability.
-            </p>
-          </article>
-
-          <article class="card">
-            <h3>Terraform Structuring for Reusable Infrastructure</h3>
-            <p>
-              A practical view of module design, layering, environment separation, and how to keep IaC
-              maintainable as cloud estates grow.
-            </p>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section id="contact">
-      <div class="container">
-        <div class="section-header">
-          <h2>Contact</h2>
+        <div class="card">
+          <h3>Delivery Automation &amp; GitOps</h3>
           <p>
-            Interested in platform engineering, DevOps leadership, cloud infrastructure, or automation work?
-            Let’s connect.
+            Improving release workflows through CI/CD guardrails, GitOps delivery, policy enforcement,
+            rollout visibility, and safer change management patterns.
           </p>
         </div>
 
-        <div class="contact-links">
-          <a href="https://github.com/sremayank" target="_blank" rel="noopener noreferrer">GitHub</a>
-          <a href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-          <a href="mailto:mayankkumaryadav01@gmail.com">Email</a>
-          <a href="#" target="_blank" rel="noopener noreferrer">Download CV</a>
+        <div class="card">
+          <h3>Operational Guardrails</h3>
+          <p>
+            Reducing repetitive engineering toil through alerting, validation systems, SlackOps tooling,
+            and automation that brings infrastructure visibility closer to delivery teams.
+          </p>
         </div>
       </div>
-    </section>
-  </main>
-
-  <footer>
-    <div class="container">
-      © 2026 Mayank Yadav • Built with a platform engineering mindset
     </div>
-  </footer>
+  </section>
+
+  <section id="interactive">
+    <div class="container">
+      <div class="section-header">
+        <h2>Interactive DevOps Content</h2>
+        <p>
+          This section will evolve into hands-on visualisations and engineering walkthroughs that show how
+          these systems fit together in practice.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3>Interactive Architecture Explorer <span style="color: var(--accent);">(Coming Soon)</span></h3>
+        <p>
+          A clickable cloud and Kubernetes architecture map showing platform components, scaling paths,
+          CI/CD flow, failure domains, and the engineering trade-offs behind each layer.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section id="blog">
+    <div class="container">
+      <div class="section-header">
+        <h2>Notes &amp; Write-Ups</h2>
+        <p>
+          Short technical posts on Kubernetes, Terraform, cloud delivery, platform guardrails, and lessons
+          learned from real-world engineering environments.
+        </p>
+      </div>
+
+      <div class="grid grid-2">
+        <article class="card">
+          <h3>Handling Kubernetes Scaling Pitfalls</h3>
+          <p>
+            Lessons from production-style scaling issues, including autoscaling edge cases, workload
+            behaviour, and the importance of observability.
+          </p>
+        </article>
+
+        <article class="card">
+          <h3>Terraform Structuring for Reusable Infrastructure</h3>
+          <p>
+            A practical view of module design, layering, environment separation, and how to keep
+            infrastructure as code maintainable as cloud estates grow.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="contact">
+    <div class="container">
+      <div class="section-header">
+        <h2>Contact</h2>
+        <p>
+          Interested in platform engineering, DevOps leadership, cloud infrastructure, automation, or
+          Kubernetes delivery? Let’s connect.
+        </p>
+      </div>
+
+      <div class="contact-links">
+        <a href="https://github.com/sremayank" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        <a href="mailto:mayankkumaryadav01@gmail.com">mayankkumaryadav01@gmail.com</a>
+        <a href="#" target="_blank" rel="noopener noreferrer">Download CV</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="modal" id="gke-modernisation" role="dialog" aria-modal="true" aria-labelledby="gke-modernisation-title">
+  <div class="modal-panel" role="document">
+    <div class="modal-header">
+      <div>
+        <span class="tag">Platform Engineering</span>
+        <h3 id="gke-modernisation-title">Multi-Cluster GKE Platform Modernisation</h3>
+      </div>
+      <button class="modal-close" type="button" aria-label="Close case study" data-modal-close>x</button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-grid">
+        <div class="detail-stat">
+          <strong>Scope</strong>
+          <span>Multi-project GCP Kubernetes platform</span>
+        </div>
+        <div class="detail-stat">
+          <strong>Focus</strong>
+          <span>Standardisation, upgrades, governance</span>
+        </div>
+        <div class="detail-stat">
+          <strong>Outcome</strong>
+          <span>Safer repeatable cluster operations</span>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h4>Context</h4>
+        <p>
+          Kubernetes clusters were running across multiple GCP projects, but provisioning, configuration,
+          and upgrade practices were not consistent everywhere. That made it harder to reason about
+          cluster state, compare environments, review infrastructure changes, and perform upgrades with
+          confidence.
+        </p>
+      </div>
+
+      <div class="detail-section">
+        <h4>Exactly What I Did</h4>
+        <ul>
+          <li>Audited existing cluster setup patterns across GCP projects to identify drift, duplicated configuration, and manual provisioning steps.</li>
+          <li>Created reusable Terraform structure for GKE cluster configuration, node pools, project-level inputs, environment variables, and shared platform defaults.</li>
+          <li>Moved cluster changes into a pull-request based workflow so infrastructure updates could be reviewed before being applied.</li>
+          <li>Added GitHub Actions validation for <code>terraform fmt</code>, <code>terraform validate</code>, and policy checks before merge.</li>
+          <li>Used OPA policy checks to catch unsafe or non-standard infrastructure changes early in CI.</li>
+          <li>Defined a blue-green upgrade approach where a new cluster version could be prepared, validated, and cut over to instead of upgrading in place blindly.</li>
+          <li>Documented the operating flow for cluster provisioning, upgrade preparation, cutover, and rollback decision points.</li>
+        </ul>
+      </div>
+
+      <div class="detail-section">
+        <h4>Upgrade Flow</h4>
+        <p>
+          For upgrades, I treated the target cluster as a controlled replacement path rather than a risky
+          one-shot change. The newer cluster could be provisioned with Terraform, checked against the same
+          policy rules, validated with platform workloads, and then used for a planned cutover. This gave
+          the team a cleaner rollback path and reduced the pressure of doing major changes directly on the
+          active cluster.
+        </p>
+      </div>
+
+      <div class="detail-section">
+        <h4>Technical Decisions</h4>
+        <ul>
+          <li>Used Terraform as the source of truth so cluster configuration lived in version control instead of individual engineer machines.</li>
+          <li>Kept project and environment differences in inputs, while common platform behavior stayed standardised.</li>
+          <li>Put validation in CI to catch formatting, syntax, and policy problems before apply-time.</li>
+          <li>Used blue-green cluster patterns where upgrade risk was high enough to justify a parallel environment and controlled migration.</li>
+        </ul>
+      </div>
+
+      <div class="detail-section">
+        <h4>How It Changed Day-to-Day Operations</h4>
+        <p>
+          Engineers could review cluster changes through pull requests, understand which settings differed
+          between environments, and follow a repeatable process for upgrades. Platform changes became less
+          dependent on manual memory and more visible through code, CI results, and documented operating
+          steps.
+        </p>
+      </div>
+
+      <div class="detail-section">
+        <h4>Impact</h4>
+        <p>
+          The platform became more predictable to operate, with stronger IaC controls, lower upgrade risk,
+          and a clearer path for managing clusters consistently across production-focused environments.
+        </p>
+      </div>
+
+      <div class="detail-section">
+        <h4>Reference Implementation</h4>
+        <p>
+          A public Terraform reference for this work is available in
+          <a
+            class="inline-link"
+            href="https://github.com/sremayank/tf-gke-management"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            sremayank/tf-gke-management
+          </a>.
+        </p>
+      </div>
+
+      <div class="stack">
+        <span>GKE</span>
+        <span>Terraform</span>
+        <span>GitHub Actions</span>
+        <span>OPA</span>
+        <span>GCP</span>
+        <span>Kubernetes</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="keda-autoscaling" role="dialog" aria-modal="true" aria-labelledby="keda-autoscaling-title">
+  <div class="modal-panel" role="document">
+    <div class="modal-header">
+      <div>
+        <span class="tag">Kubernetes Scaling</span>
+        <h3 id="keda-autoscaling-title">Event-Driven Autoscaling with KEDA</h3>
+      </div>
+      <button class="modal-close" type="button" aria-label="Close case study" data-modal-close>x</button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-grid">
+        <div class="detail-stat">
+          <strong>Scope</strong>
+          <span>Multi-tenant Kubernetes workloads</span>
+        </div>
+        <div class="detail-stat">
+          <strong>Focus</strong>
+          <span>Queue-aware scaling and resilience</span>
+        </div>
+        <div class="detail-stat">
+          <strong>Outcome</strong>
+          <span>Faster burst response with less idle capacity</span>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h4>Context</h4>
+        <p>
+          Static HPA configuration was not responding well to tenant-specific workload patterns. Queue-backed
+          processing needed scaling logic tied to real demand so workloads could scale out quickly during
+          bursts and scale back down when pressure dropped.
+        </p>
+      </div>
+
+      <div class="detail-section">
+        <h4>What I Delivered</h4>
+        <ul>
+          <li>Introduced KEDA ScaledObjects using queue depth and external demand signals as scaling triggers.</li>
+          <li>Integrated KEDA with Kubernetes HPA so consumer workloads scaled with actual event pressure.</li>
+          <li>Replaced static HPA assumptions with dynamic per-tenant scaling strategies.</li>
+          <li>Implemented tenant-specific max-replica limits to control resource allocation under load.</li>
+          <li>Added fallback behavior so workloads stayed resilient when metrics were delayed or unavailable.</li>
+        </ul>
+      </div>
+
+      <div class="detail-section">
+        <h4>Technical Shape</h4>
+        <p>
+          The implementation used Kubernetes autoscaling primitives, KEDA trigger definitions, and
+          workload-level limits. The important trade-off was balancing fast scale-out behavior with guardrails
+          that kept noisy tenants from consuming disproportionate capacity or driving unnecessary idle spend.
+        </p>
+      </div>
+
+      <div class="detail-section">
+        <h4>Impact</h4>
+        <p>
+          Scaling became more aligned with actual workload pressure, improving responsiveness during bursts,
+          reducing idle compute during quieter periods, and lowering the need for manual capacity tuning.
+        </p>
+      </div>
+
+      <div class="detail-section">
+        <h4>Reference Demo</h4>
+        <p>
+          I also maintain a small
+          <a
+            class="inline-link"
+            href="https://github.com/sremayank/sremayank.github.io/tree/featured_work/demos/keda-event-driven-autoscaling-demo"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Redis-backed KEDA autoscaling demo
+          </a>
+          that shows the pattern with a queue producer, worker deployment, and Kubernetes manifests.
+        </p>
+      </div>
+
+      <div class="stack">
+        <span>Kubernetes</span>
+        <span>KEDA</span>
+        <span>Autoscaling</span>
+        <span>Event-driven</span>
+        <span>Redis</span>
+        <span>Multi-tenant</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="gke-scalar" role="dialog" aria-modal="true" aria-labelledby="gke-scalar-title">
+  <div class="modal-panel" role="document">
+    <div class="modal-header">
+      <div>
+        <span class="tag">Cost Optimisation</span>
+        <h3 id="gke-scalar-title">GKE Scalar – Serverless Cluster Cost Optimisation</h3>
+      </div>
+      <button class="modal-close" type="button" aria-label="Close case study" data-modal-close>x</button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-grid">
+        <div class="detail-stat">
+          <strong>Scope</strong>
+          <span>Non-production GKE environments</span>
+        </div>
+        <div class="detail-stat">
+          <strong>Focus</strong>
+          <span>Scheduled capacity and automation</span>
+        </div>
+        <div class="detail-stat">
+          <strong>Outcome</strong>
+          <span>Lower idle compute spend</span>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h4>Context</h4>
+        <p>
+          Non-production clusters were staying fully provisioned outside working hours. The cost profile
+          did not match actual usage, but the solution still needed to preserve predictable availability
+          when engineers needed the environments.
+        </p>
+      </div>
+
+      <div class="detail-section">
+        <h4>What I Delivered</h4>
+        <ul>
+          <li>Built a serverless scheduler using Cloud Scheduler and Cloud Functions.</li>
+          <li>Automated GKE node pool resizing for working-hours and off-hours capacity profiles.</li>
+          <li>Packaged the implementation as a reusable Terraform module for consistent rollout.</li>
+          <li>Kept the operating model lightweight so teams could adopt it without extra platform overhead.</li>
+        </ul>
+      </div>
+
+      <div class="detail-section">
+        <h4>Technical Shape</h4>
+        <p>
+          The architecture used managed GCP services to trigger capacity changes without maintaining a
+          dedicated controller. Terraform handled repeatability, while scheduled serverless execution kept
+          the system simple and low-maintenance.
+        </p>
+      </div>
+
+      <div class="detail-section">
+        <h4>Impact</h4>
+        <p>
+          Non-production compute waste was reduced while environments remained available during working
+          hours. The module-based approach also made the pattern reusable across additional clusters.
+        </p>
+      </div>
+
+      <div class="stack">
+        <span>GCP</span>
+        <span>Cloud Scheduler</span>
+        <span>Cloud Functions</span>
+        <span>GKE</span>
+        <span>Terraform</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="container">
+    © 2026 Mayank Yadav • Built with a platform engineering mindset
+  </div>
+</footer>
+<script>
+  const detailTriggers = document.querySelectorAll("[data-modal-target]");
+  const modalCloseButtons = document.querySelectorAll("[data-modal-close]");
+  let activeModal = null;
+  let activeTrigger = null;
+
+  function openModal(modal, trigger) {
+    activeModal = modal;
+    activeTrigger = trigger;
+    modal.classList.add("is-open");
+    document.body.classList.add("modal-open");
+    modal.querySelector("[data-modal-close]").focus();
+  }
+
+  function closeModal() {
+    if (!activeModal) {
+      return;
+    }
+
+    activeModal.classList.remove("is-open");
+    document.body.classList.remove("modal-open");
+
+    if (activeTrigger) {
+      activeTrigger.focus();
+    }
+
+    activeModal = null;
+    activeTrigger = null;
+  }
+
+  detailTriggers.forEach((trigger) => {
+    trigger.addEventListener("click", () => {
+      const modal = document.getElementById(trigger.dataset.modalTarget);
+
+      if (modal) {
+        openModal(modal, trigger);
+      }
+    });
+  });
+
+  modalCloseButtons.forEach((button) => {
+    button.addEventListener("click", closeModal);
+  });
+
+  document.querySelectorAll(".modal").forEach((modal) => {
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) {
+        closeModal();
+      }
+    });
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeModal();
+    }
+  });
+</script>
 </body>
 </html>

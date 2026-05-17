@@ -1,0 +1,6 @@
+resources:
+  - namespace.yaml
+  - redis.yaml
+  - worker.yaml
+  - producer-job.yaml
+  - scaledobject.yaml
