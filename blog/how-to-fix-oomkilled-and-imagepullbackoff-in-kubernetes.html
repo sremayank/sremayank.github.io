@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to Fix OOMKilled and ImagePullBackOff in Kubernetes | Mayank Yadav</title>
+  <meta
+    name="description"
+    content="A detailed troubleshooting guide for fixing Kubernetes OOMKilled and ImagePullBackOff pod failures with kubectl commands, root causes, and prevention tips."
+  />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<header>
+  <div class="container">
+    <nav>
+      <a href="../index.html" class="brand">Mayank<span>.dev</span></a>
+      <div class="nav-links">
+        <a href="../index.html#featured-work">Case Studies</a>
+        <a href="../index.html#focus">Focus Areas</a>
+        <a href="./index.html">Blog</a>
+        <a href="../index.html#contact">Contact</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="container">
+      <div class="eyebrow">Kubernetes Troubleshooting</div>
+      <h1>How to Fix OOMKilled and ImagePullBackOff in Kubernetes</h1>
+      <p class="lede">
+        <code>OOMKilled</code> and <code>ImagePullBackOff</code> are two of the most common Kubernetes pod
+        failures. One happens after a container starts and uses too much memory. The other happens before a
+        container starts because Kubernetes cannot pull the image.
+      </p>
+      <div class="meta">
+        <span>Published June 2, 2026</span>
+        <span>14 min read</span>
+        <span>Kubernetes</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="content">
+    <div class="container article-body">
+      <div class="callout">
+        <p>
+          <strong>First move:</strong> run <code>kubectl describe pod &lt;pod&gt;</code>. The Events section
+          usually tells you whether the failure is a memory limit problem, missing image, registry
+          authentication issue, bad tag, or network problem.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>Table of Contents</h2>
+        <ul class="toc">
+          <li><a href="#quick-diagnosis">Quick Diagnosis</a></li>
+          <li><a href="#fix-oomkilled">How to Fix OOMKilled</a></li>
+          <li><a href="#fix-imagepullbackoff">How to Fix ImagePullBackOff</a></li>
+          <li><a href="#prevention">Prevention Checklist</a></li>
+        </ul>
+      </div>
+
+      <h2 id="quick-diagnosis">Quick Diagnosis</h2>
+      <p>
+        Start by looking at pod status, container state, previous logs, and events.
+      </p>
+      <pre><code class="language-bash">kubectl get pods
+kubectl describe pod &lt;pod-name&gt;
+kubectl logs &lt;pod-name&gt;
+kubectl logs &lt;pod-name&gt; --previous</code></pre>
+
+      <p>
+        The two failures look different:
+      </p>
+      <ul>
+        <li><strong>OOMKilled:</strong> the container started, exceeded its memory limit or was killed under memory pressure, and exited with reason <code>OOMKilled</code>.</li>
+        <li><strong>ImagePullBackOff:</strong> the container did not start because the node could not pull the image. Kubernetes retries with increasing delay.</li>
+      </ul>
+
+      <h2 id="fix-oomkilled">How to Fix OOMKilled</h2>
+      <p>
+        <code>OOMKilled</code> means the container was terminated because memory usage crossed a boundary.
+        Most commonly, the container exceeded its configured memory limit. The exit code is often
+        <code>137</code>, which means the process received <code>SIGKILL</code>.
+      </p>
+
+      <h3>1. Confirm the container was OOM killed</h3>
+      <pre><code class="language-bash">kubectl describe pod &lt;pod-name&gt;</code></pre>
+
+      <p>
+        Look for output like this under container state or last state:
+      </p>
+      <pre><code class="language-text">Last State:   Terminated
+Reason:       OOMKilled
+Exit Code:    137</code></pre>
+
+      <h3>2. Check memory requests and limits</h3>
+      <pre><code class="language-bash">kubectl get pod &lt;pod-name&gt; -o jsonpath='{.spec.containers[*].resources}'</code></pre>
+
+      <p>
+        A container with a memory limit that is too low will restart even if the node has free memory. For
+        example, if the application regularly needs 700Mi but the limit is 512Mi, Kubernetes will kill it
+        when it crosses that limit.
+      </p>
+
+      <h3>3. Check actual memory usage</h3>
+      <pre><code class="language-bash">kubectl top pod &lt;pod-name&gt;
+kubectl top pod &lt;pod-name&gt; --containers</code></pre>
+
+      <p>
+        If metrics are not available, check your monitoring stack, container logs, runtime metrics, or
+        application profiler. For JVM, Node.js, Python, and Go applications, the runtime may need explicit
+        memory tuning so it understands the container limit.
+      </p>
+
+      <h3>4. Increase the memory limit carefully</h3>
+      <p>
+        If the workload genuinely needs more memory, increase the request and limit. Do this intentionally:
+        request should represent expected baseline usage, while limit should represent the upper bound the
+        application can safely use.
+      </p>
+      <pre><code class="language-yaml">resources:
+  requests:
+    memory: "512Mi"
+    cpu: "250m"
+  limits:
+    memory: "1Gi"
+    cpu: "1"</code></pre>
+
+      <h3>5. Fix leaks or spikes</h3>
+      <p>
+        Raising the limit is not always the real fix. If memory grows continuously until the pod dies, look
+        for memory leaks, unbounded caches, large batch sizes, oversized queues, expensive request payloads,
+        or missing backpressure. If memory spikes only during traffic bursts, consider concurrency limits,
+        streaming, pagination, or smaller worker batch sizes.
+      </p>
+
+      <h3>6. Roll out and watch restarts</h3>
+      <pre><code class="language-bash">kubectl rollout restart deployment/&lt;deployment-name&gt;
+kubectl rollout status deployment/&lt;deployment-name&gt;
+kubectl get pods -w</code></pre>
+
+      <p>
+        After the rollout, watch restart counts, memory graphs, latency, and application-level errors. The
+        goal is not just to keep the pod alive; the goal is to make memory behavior predictable.
+      </p>
+
+      <h2 id="fix-imagepullbackoff">How to Fix ImagePullBackOff</h2>
+      <p>
+        <code>ImagePullBackOff</code> means Kubernetes tried to pull the container image, failed, and is now
+        backing off before trying again. The underlying event usually says why.
+      </p>
+
+      <h3>1. Read the pod events</h3>
+      <pre><code class="language-bash">kubectl describe pod &lt;pod-name&gt;</code></pre>
+
+      <p>
+        Common event messages include <code>manifest unknown</code>, <code>pull access denied</code>,
+        <code>unauthorized</code>, <code>not found</code>, or network timeout errors.
+      </p>
+
+      <h3>2. Verify image name and tag</h3>
+      <p>
+        Typos are common. Confirm the registry hostname, repository path, image name, and tag.
+      </p>
+      <pre><code class="language-bash">kubectl get pod &lt;pod-name&gt; -o jsonpath='{.spec.containers[*].image}'</code></pre>
+
+      <p>
+        If your manifest uses <code>my-app:latest</code>, consider switching to immutable version tags or
+        digests. They make rollbacks and audits much clearer.
+      </p>
+
+      <h3>3. Confirm the image exists in the registry</h3>
+      <p>
+        Make sure the image was actually pushed by CI. A deployment can fail if the manifest references a
+        tag that the build job never published.
+      </p>
+      <pre><code class="language-bash">docker pull registry.example.com/team/my-app:1.2.3</code></pre>
+
+      <h3>4. Fix registry authentication</h3>
+      <p>
+        Private registries require credentials. In Kubernetes, those credentials are usually provided with
+        an <code>imagePullSecrets</code> entry or through cloud-provider node identity.
+      </p>
+      <pre><code class="language-bash">kubectl create secret docker-registry regcred \
+  --docker-server=registry.example.com \
+  --docker-username=&lt;username&gt; \
+  --docker-password=&lt;password&gt; \
+  --docker-email=&lt;email&gt;</code></pre>
+
+      <pre><code class="language-yaml">spec:
+  imagePullSecrets:
+    - name: regcred
+  containers:
+    - name: app
+      image: registry.example.com/team/my-app:1.2.3</code></pre>
+
+      <h3>5. Check namespace and service account</h3>
+      <p>
+        Secrets are namespace-scoped. If the Deployment runs in <code>production</code>, the pull secret
+        must exist in <code>production</code>. If you attach the secret to a service account, verify the pod
+        is using that service account.
+      </p>
+      <pre><code class="language-bash">kubectl get secret regcred -n production
+kubectl get serviceaccount default -n production -o yaml</code></pre>
+
+      <h3>6. Check node network and registry availability</h3>
+      <p>
+        If credentials and image names are correct, look at node-to-registry connectivity. Private clusters,
+        firewall rules, proxy settings, DNS issues, missing NAT, and registry outages can all prevent image
+        pulls.
+      </p>
+
+      <h2 id="prevention">Prevention Checklist</h2>
+      <ul>
+        <li>Use CI to verify the image exists before updating Kubernetes manifests.</li>
+        <li>Use immutable image tags or digests instead of relying on <code>latest</code>.</li>
+        <li>Store pull secrets in the same namespace as the workload or attach them to the correct service account.</li>
+        <li>Set memory requests and limits from real usage data, not guesses.</li>
+        <li>Add dashboards for memory usage, restarts, and pod waiting reasons.</li>
+        <li>Alert on repeated <code>OOMKilled</code>, <code>ImagePullBackOff</code>, and <code>CrashLoopBackOff</code> states.</li>
+        <li>Use admission policies to require resource requests, limits, and approved registries.</li>
+      </ul>
+
+      <div class="callout">
+        <p>
+          <strong>Operational habit:</strong> always capture the event message before changing anything.
+          The event tells you whether you should tune memory, fix code, push an image, correct a tag, or
+          repair registry access.
+        </p>
+      </div>
+
+      <a class="back-link" href="./index.html">Back to Kubernetes blog</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="container">
+    © 2026 Mayank Yadav • Built with a platform engineering mindset
+  </div>
+</footer>
+</body>
+</html>

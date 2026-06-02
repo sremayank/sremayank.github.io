@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kubernetes Blog | Mayank Yadav</title>
+  <meta
+    name="description"
+    content="Detailed Kubernetes guides by Mayank Yadav covering Services, ImagePullBackOff, OOMKilled, troubleshooting, and production operations."
+  />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<header>
+  <div class="container">
+    <nav>
+      <a href="../index.html" class="brand">Mayank<span>.dev</span></a>
+      <div class="nav-links">
+        <a href="../index.html#featured-work">Case Studies</a>
+        <a href="../index.html#focus">Focus Areas</a>
+        <a href="./index.html">Blog</a>
+        <a href="../index.html#contact">Contact</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="container">
+      <div class="eyebrow">Kubernetes Operations • Troubleshooting • Platform Engineering</div>
+      <h1>Kubernetes Blog</h1>
+      <p class="lede">
+        Practical Kubernetes guides for exposing workloads, debugging pod failures, and understanding
+        memory pressure in production-style environments.
+      </p>
+
+      <div class="post-grid">
+        <a class="card post-card" href="./how-to-use-kubernetes-service-to-expose-your-application.html">
+          <h2>How to Use Kubernetes Service to Expose Your Application</h2>
+          <p>
+            Learn how ClusterIP, NodePort, LoadBalancer, and headless Services connect Pods to users,
+            other workloads, and external traffic.
+          </p>
+          <span class="read-more">Read guide</span>
+        </a>
+
+        <a class="card post-card" href="./how-to-fix-oomkilled-and-imagepullbackoff-in-kubernetes.html">
+          <h2>How to Fix OOMKilled and ImagePullBackOff in Kubernetes</h2>
+          <p>
+            A field-ready troubleshooting workflow for two of the most common pod failure states:
+            memory kills and image pull failures.
+          </p>
+          <span class="read-more">Read guide</span>
+        </a>
+
+        <a class="card post-card" href="./understanding-kubernetes-oomkilled.html">
+          <h2>Understanding Kubernetes OOMKilled</h2>
+          <p>
+            Go deeper into what OOMKilled means, how cgroups and limits are involved, and how to stop
+            repeat failures.
+          </p>
+          <span class="read-more">Read guide</span>
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="container">
+    © 2026 Mayank Yadav • Built with a platform engineering mindset
+  </div>
+</footer>
+</body>
+</html>
