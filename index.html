@@ -631,7 +631,7 @@
         <a href="#featured-work">Case Studies</a>
         <a href="#more-work">More Work</a>
         <a href="#focus">Focus Areas</a>
-        <a href="#blog">Notes</a>
+        <a href="#blog">Blog</a>
         <a href="#contact">Contact</a>
       </div>
     </nav>
@@ -932,27 +932,47 @@
   <section id="blog">
     <div class="container">
       <div class="section-header">
-        <h2>Notes &amp; Write-Ups</h2>
+        <h2>Kubernetes Blog</h2>
         <p>
-          Short technical posts on Kubernetes, Terraform, cloud delivery, platform guardrails, and lessons
-          learned from real-world engineering environments.
+          Detailed technical posts on Kubernetes networking, pod troubleshooting, memory pressure, and
+          production operations.
         </p>
       </div>
 
       <div class="grid grid-2">
         <article class="card">
-          <h3>Handling Kubernetes Scaling Pitfalls</h3>
+          <h3>
+            <a class="inline-link" href="blog/how-to-use-kubernetes-service-to-expose-your-application.html">
+              How to Use Kubernetes Service to Expose Your Application
+            </a>
+          </h3>
           <p>
-            Lessons from production-style scaling issues, including autoscaling edge cases, workload
-            behaviour, and the importance of observability.
+            A practical guide to ClusterIP, NodePort, LoadBalancer, headless Services, selectors,
+            endpoints, ports, and troubleshooting broken Service routing.
           </p>
         </article>
 
         <article class="card">
-          <h3>Terraform Structuring for Reusable Infrastructure</h3>
+          <h3>
+            <a class="inline-link" href="blog/how-to-fix-oomkilled-and-imagepullbackoff-in-kubernetes.html">
+              How to Fix OOMKilled and ImagePullBackOff in Kubernetes
+            </a>
+          </h3>
           <p>
-            A practical view of module design, layering, environment separation, and how to keep
-            infrastructure as code maintainable as cloud estates grow.
+            A troubleshooting workflow for memory kills, exit code 137, failed image pulls, registry
+            authentication, missing tags, and pod events.
+          </p>
+        </article>
+
+        <article class="card">
+          <h3>
+            <a class="inline-link" href="blog/understanding-kubernetes-oomkilled.html">
+              Understanding Kubernetes OOMKilled
+            </a>
+          </h3>
+          <p>
+            A deeper explanation of why containers are OOM killed, how requests and limits interact,
+            how QoS classes matter, and how to prevent repeat failures.
           </p>
         </article>
       </div>

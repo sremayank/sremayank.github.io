@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to Use Kubernetes Service to Expose Your Application | Mayank Yadav</title>
+  <meta
+    name="description"
+    content="A detailed practical guide to Kubernetes Services, including ClusterIP, NodePort, LoadBalancer, headless Services, selectors, ports, endpoints, and troubleshooting."
+  />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<header>
+  <div class="container">
+    <nav>
+      <a href="../index.html" class="brand">Mayank<span>.dev</span></a>
+      <div class="nav-links">
+        <a href="../index.html#featured-work">Case Studies</a>
+        <a href="../index.html#focus">Focus Areas</a>
+        <a href="./index.html">Blog</a>
+        <a href="../index.html#contact">Contact</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="container">
+      <div class="eyebrow">Kubernetes Networking</div>
+      <h1>How to Use Kubernetes Service to Expose Your Application</h1>
+      <p class="lede">
+        Pods are temporary. IP addresses change. Deployments scale up and down. A Kubernetes Service gives
+        your application a stable network identity so other workloads and users can reach it reliably.
+      </p>
+      <div class="meta">
+        <span>Published June 2, 2026</span>
+        <span>12 min read</span>
+        <span>Kubernetes</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="content">
+    <div class="container article-body">
+      <div class="callout">
+        <p>
+          <strong>Quick answer:</strong> create a Service that selects your application Pods by label, map
+          a stable Service port to the container port, and choose the Service type based on who needs access:
+          internal workloads, node-level access, cloud load balancer traffic, or direct DNS records.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>Table of Contents</h2>
+        <ul class="toc">
+          <li><a href="#why-services-exist">Why Services Exist</a></li>
+          <li><a href="#service-types">Service Types</a></li>
+          <li><a href="#hands-on-example">Hands-On Example</a></li>
+          <li><a href="#troubleshooting">Troubleshooting</a></li>
+          <li><a href="#production-tips">Production Tips</a></li>
+        </ul>
+      </div>
+
+      <h2 id="why-services-exist">Why Services Exist</h2>
+      <p>
+        In Kubernetes, a Pod is not a permanent server. It can be rescheduled, replaced during a rollout,
+        evicted from a node, or multiplied when a Deployment scales. Each new Pod gets its own IP address.
+        If another application called the Pod IP directly, that connection would break as soon as the Pod
+        was recreated.
+      </p>
+      <p>
+        A Service solves this by creating a stable virtual endpoint. Instead of calling Pod IPs directly,
+        clients call the Service name or Service IP. Kubernetes then routes traffic to one of the healthy
+        matching Pods behind it.
+      </p>
+
+      <h3>The three important pieces</h3>
+      <ul>
+        <li><strong>Selector:</strong> tells the Service which Pods belong behind it, usually using labels like <code>app: web</code>.</li>
+        <li><strong>Port:</strong> the port clients use when connecting to the Service.</li>
+        <li><strong>Target port:</strong> the port your container actually listens on inside the Pod.</li>
+      </ul>
+
+      <h2 id="service-types">Service Types</h2>
+      <p>
+        Kubernetes gives you several Service types. The right one depends on where the traffic comes from.
+      </p>
+
+      <h3>ClusterIP</h3>
+      <p>
+        <code>ClusterIP</code> is the default Service type. It exposes the application only inside the
+        cluster. Use it when one workload needs to call another workload, such as an API calling a backend
+        service or a worker calling an internal queue gateway.
+      </p>
+      <pre><code class="language-yaml">apiVersion: v1
+kind: Service
+metadata:
+  name: web
+spec:
+  type: ClusterIP
+  selector:
+    app: web
+  ports:
+    - port: 80
+      targetPort: 8080</code></pre>
+
+      <h3>NodePort</h3>
+      <p>
+        <code>NodePort</code> exposes the Service on a static port across every node in the cluster. It is
+        useful for simple demos, bare-metal environments, or debugging, but it is usually not the cleanest
+        production entry point because clients must know node addresses and a high port number.
+      </p>
+      <pre><code class="language-yaml">apiVersion: v1
+kind: Service
+metadata:
+  name: web-nodeport
+spec:
+  type: NodePort
+  selector:
+    app: web
+  ports:
+    - port: 80
+      targetPort: 8080
+      nodePort: 30080</code></pre>
+
+      <h3>LoadBalancer</h3>
+      <p>
+        <code>LoadBalancer</code> asks the cloud provider to provision an external load balancer and route
+        traffic to the Service. This is common for internet-facing or private network-facing applications
+        in managed Kubernetes platforms such as GKE, EKS, and AKS.
+      </p>
+      <pre><code class="language-yaml">apiVersion: v1
+kind: Service
+metadata:
+  name: web-public
+spec:
+  type: LoadBalancer
+  selector:
+    app: web
+  ports:
+    - port: 80
+      targetPort: 8080</code></pre>
+
+      <h3>Headless Service</h3>
+      <p>
+        A headless Service sets <code>clusterIP: None</code>. Instead of giving clients one virtual IP,
+        Kubernetes DNS returns the individual Pod IPs. This is useful for stateful systems that need stable
+        peer discovery, such as databases, brokers, or custom clustering protocols.
+      </p>
+      <pre><code class="language-yaml">apiVersion: v1
+kind: Service
+metadata:
+  name: database
+spec:
+  clusterIP: None
+  selector:
+    app: database
+  ports:
+    - port: 5432
+      targetPort: 5432</code></pre>
+
+      <h2 id="hands-on-example">Hands-On Example</h2>
+      <p>
+        Suppose you have a simple web application that listens on port <code>8080</code>. First, create a
+        Deployment with labels. The labels are important because the Service will use them to find the Pods.
+      </p>
+      <pre><code class="language-yaml">apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: web
+          image: nginx:1.27
+          ports:
+            - containerPort: 80</code></pre>
+
+      <p>
+        Now expose it with a Service. In this example, the Service listens on port <code>80</code> and sends
+        traffic to the container's port <code>80</code>.
+      </p>
+      <pre><code class="language-yaml">apiVersion: v1
+kind: Service
+metadata:
+  name: web
+spec:
+  selector:
+    app: web
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80</code></pre>
+
+      <p>
+        Apply the manifests:
+      </p>
+      <pre><code class="language-bash">kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml</code></pre>
+
+      <p>
+        Check that the Service exists and has endpoints:
+      </p>
+      <pre><code class="language-bash">kubectl get svc web
+kubectl get endpoints web
+kubectl describe svc web</code></pre>
+
+      <p>
+        From another Pod in the same namespace, you can call the Service by name:
+      </p>
+      <pre><code class="language-bash">kubectl run curl-test --rm -it --image=curlimages/curl -- sh
+curl http://web</code></pre>
+
+      <h2 id="troubleshooting">Troubleshooting</h2>
+      <h3>The Service exists but traffic fails</h3>
+      <p>
+        Start with endpoints. If <code>kubectl get endpoints web</code> shows no addresses, the Service is
+        not selecting any Pods. Check that the Service selector exactly matches the Pod labels.
+      </p>
+      <pre><code class="language-bash">kubectl get pods --show-labels
+kubectl describe svc web</code></pre>
+
+      <h3>The Service has endpoints but returns connection refused</h3>
+      <p>
+        This usually means the Service is routing to the Pod, but nothing is listening on the target port.
+        Check the container port, application bind address, and readiness probe. A common mistake is setting
+        <code>targetPort: 8080</code> when the container listens on <code>80</code>, or binding the app to
+        <code>127.0.0.1</code> instead of <code>0.0.0.0</code>.
+      </p>
+
+      <h3>LoadBalancer is stuck in pending</h3>
+      <p>
+        A pending external IP often points to cloud-provider integration, quota, permissions, or unsupported
+        local cluster behavior. In local clusters such as kind or minikube, <code>LoadBalancer</code> may
+        need an extra component like MetalLB or a built-in tunnel command.
+      </p>
+
+      <h2 id="production-tips">Production Tips</h2>
+      <ul>
+        <li>Use named ports such as <code>http</code> and <code>metrics</code> so manifests stay readable.</li>
+        <li>Keep Services stable and change Deployments behind them during rollouts.</li>
+        <li>Use readiness probes so Services route only to Pods that are ready to receive traffic.</li>
+        <li>Prefer Ingress or Gateway API for many HTTP applications instead of creating one cloud load balancer per Service.</li>
+        <li>Use NetworkPolicies when you need to restrict which Pods can call the Service.</li>
+        <li>Document whether a Service is internal-only, private load balanced, or public internet-facing.</li>
+      </ul>
+
+      <div class="callout">
+        <p>
+          <strong>Rule of thumb:</strong> use <code>ClusterIP</code> for internal app-to-app traffic,
+          <code>LoadBalancer</code> for simple external exposure, Ingress or Gateway API for HTTP routing,
+          and headless Services for direct Pod discovery.
+        </p>
+      </div>
+
+      <a class="back-link" href="./index.html">Back to Kubernetes blog</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="container">
+    © 2026 Mayank Yadav • Built with a platform engineering mindset
+  </div>
+</footer>
+</body>
+</html>

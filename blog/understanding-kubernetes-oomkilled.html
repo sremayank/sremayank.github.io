@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Understanding Kubernetes OOMKilled | Mayank Yadav</title>
+  <meta
+    name="description"
+    content="A deep practical explanation of Kubernetes OOMKilled, memory limits, cgroups, QoS classes, exit code 137, diagnosis, and prevention."
+  />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<header>
+  <div class="container">
+    <nav>
+      <a href="../index.html" class="brand">Mayank<span>.dev</span></a>
+      <div class="nav-links">
+        <a href="../index.html#featured-work">Case Studies</a>
+        <a href="../index.html#focus">Focus Areas</a>
+        <a href="./index.html">Blog</a>
+        <a href="../index.html#contact">Contact</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="container">
+      <div class="eyebrow">Kubernetes Reliability</div>
+      <h1>Understanding Kubernetes OOMKilled</h1>
+      <p class="lede">
+        <code>OOMKilled</code> is not a random Kubernetes error. It is a signal that a process crossed a
+        memory boundary or the node was under memory pressure. Understanding where that boundary came from
+        is the key to fixing it properly.
+      </p>
+      <div class="meta">
+        <span>Published June 2, 2026</span>
+        <span>13 min read</span>
+        <span>Kubernetes</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="content">
+    <div class="container article-body">
+      <div class="callout">
+        <p>
+          <strong>Short version:</strong> a container is usually marked <code>OOMKilled</code> when it uses
+          more memory than its configured limit. The fix may be a higher limit, but it may also be better
+          application memory management, runtime tuning, smaller batches, or safer autoscaling.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>Table of Contents</h2>
+        <ul class="toc">
+          <li><a href="#what-it-means">What OOMKilled Means</a></li>
+          <li><a href="#limits-requests-qos">Limits, Requests, and QoS</a></li>
+          <li><a href="#common-causes">Common Causes</a></li>
+          <li><a href="#diagnosis">How to Diagnose It</a></li>
+          <li><a href="#prevention">How to Prevent It</a></li>
+        </ul>
+      </div>
+
+      <h2 id="what-it-means">What OOMKilled Means</h2>
+      <p>
+        OOM stands for out of memory. When Kubernetes reports <code>Reason: OOMKilled</code>, the container
+        process was killed because it used too much memory. You will often see exit code <code>137</code>,
+        which means the process was terminated with <code>SIGKILL</code>.
+      </p>
+      <p>
+        Kubernetes does not politely ask the process to shut down in this case. The process is killed, the
+        container exits, and the kubelet restarts it if the pod's restart policy allows it. That is why
+        OOMKilled often appears together with increasing restart counts.
+      </p>
+
+      <h2 id="limits-requests-qos">Limits, Requests, and QoS</h2>
+      <p>
+        To understand OOMKilled, you need to understand two resource settings:
+      </p>
+      <ul>
+        <li><strong>Memory request:</strong> how much memory Kubernetes reserves for scheduling decisions.</li>
+        <li><strong>Memory limit:</strong> the maximum memory the container is allowed to use.</li>
+      </ul>
+
+      <p>
+        If a container has a memory limit of <code>512Mi</code> and tries to use more than that, it can be
+        killed even if the node has unused memory. The limit is enforced at the container level by Linux
+        control groups.
+      </p>
+
+      <pre><code class="language-yaml">resources:
+  requests:
+    memory: "256Mi"
+  limits:
+    memory: "512Mi"</code></pre>
+
+      <h3>QoS classes matter during node pressure</h3>
+      <p>
+        Kubernetes assigns pods a Quality of Service class based on requests and limits:
+      </p>
+      <ul>
+        <li><strong>Guaranteed:</strong> every container has equal CPU and memory request and limit.</li>
+        <li><strong>Burstable:</strong> at least one request or limit is set, but the pod is not Guaranteed.</li>
+        <li><strong>BestEffort:</strong> no requests or limits are set.</li>
+      </ul>
+      <p>
+        During node memory pressure, BestEffort and Burstable pods are more likely to be evicted than
+        Guaranteed pods. This is separate from a container exceeding its own memory limit, but both are part
+        of the same operational picture: memory must be requested, limited, and monitored with intent.
+      </p>
+
+      <h2 id="common-causes">Common Causes</h2>
+      <h3>Memory limit is too low</h3>
+      <p>
+        This is the simplest case. The application needs more memory than the limit allows. It may run fine
+        locally or in staging with low traffic, then die in production under realistic load.
+      </p>
+
+      <h3>Application memory leak</h3>
+      <p>
+        If memory grows steadily over time and never returns to a healthy baseline, suspect a leak. Common
+        sources include unbounded maps, retained request objects, connection leaks, large in-memory caches,
+        and background jobs that accumulate state.
+      </p>
+
+      <h3>Runtime does not understand the container limit</h3>
+      <p>
+        Some runtimes need explicit configuration. JVM heap size, Node.js old space size, Python worker
+        concurrency, and Go memory behavior can all affect whether the process respects container limits.
+        The application may believe it has the node's memory available when it only has the container limit.
+      </p>
+
+      <h3>Large batches or high concurrency</h3>
+      <p>
+        Workers often fail because each message, file, or database result set is loaded into memory. A batch
+        size that looks small during testing can become expensive when concurrency multiplies it.
+      </p>
+
+      <h3>Sidecars and shared pod pressure</h3>
+      <p>
+        Service mesh proxies, log shippers, and monitoring agents also use memory. If you size only the main
+        application container and ignore sidecars, the pod may be less stable than expected.
+      </p>
+
+      <h2 id="diagnosis">How to Diagnose It</h2>
+      <h3>1. Confirm the reason and exit code</h3>
+      <pre><code class="language-bash">kubectl describe pod &lt;pod-name&gt;</code></pre>
+
+      <p>
+        Look for container state, last state, restart count, reason, and exit code.
+      </p>
+      <pre><code class="language-text">Last State:   Terminated
+Reason:       OOMKilled
+Exit Code:    137</code></pre>
+
+      <h3>2. Read previous logs</h3>
+      <p>
+        Current logs may only show the restarted container. Use previous logs to inspect the container that
+        died.
+      </p>
+      <pre><code class="language-bash">kubectl logs &lt;pod-name&gt; --previous</code></pre>
+
+      <h3>3. Check memory usage</h3>
+      <pre><code class="language-bash">kubectl top pod &lt;pod-name&gt;
+kubectl top pod &lt;pod-name&gt; --containers</code></pre>
+
+      <p>
+        Pair this with historical metrics from Prometheus, Cloud Monitoring, Datadog, New Relic, or your
+        observability platform. The pattern matters: a sudden spike points to traffic or batch behavior,
+        while a steady slope points toward a leak.
+      </p>
+
+      <h3>4. Compare memory usage to limits</h3>
+      <pre><code class="language-bash">kubectl get pod &lt;pod-name&gt; -o jsonpath='{.spec.containers[*].resources}'</code></pre>
+
+      <p>
+        Check whether the limit is realistic for peak usage. Also check whether the request is too low,
+        because a low request can pack too many pods onto the same node and contribute to node pressure.
+      </p>
+
+      <h3>5. Inspect node pressure and events</h3>
+      <pre><code class="language-bash">kubectl describe node &lt;node-name&gt;
+kubectl get events --sort-by=.lastTimestamp</code></pre>
+
+      <p>
+        If the node is under memory pressure, you may see eviction events. If only one container repeatedly
+        exceeds its limit, focus on the application and its container resource settings.
+      </p>
+
+      <h2 id="prevention">How to Prevent It</h2>
+      <h3>Set memory based on evidence</h3>
+      <p>
+        Start with measured baseline and peak usage. For example, if the service normally uses 350Mi and
+        peaks near 700Mi during traffic bursts, a 512Mi limit is likely to create avoidable restarts.
+      </p>
+
+      <h3>Tune the application runtime</h3>
+      <p>
+        For JVM applications, configure heap size with awareness of container memory and leave room for
+        non-heap memory. For Node.js, consider memory flags if the default is not appropriate. For worker
+        processes, tune concurrency and batch size so memory grows predictably.
+      </p>
+
+      <h3>Use alerts before the kill happens</h3>
+      <p>
+        Alert when memory usage approaches a percentage of the limit, not only after restart counts rise.
+        A useful alert catches the pod at 80-90 percent of its limit before it crosses the boundary.
+      </p>
+
+      <h3>Make autoscaling memory-aware</h3>
+      <p>
+        Horizontal scaling can help when memory rises with request volume or queue depth. It will not fix a
+        leak by itself, but it can reduce per-pod pressure for traffic-driven workloads. For queue workers,
+        event-driven autoscaling with KEDA can be a strong fit because scaling follows actual backlog.
+      </p>
+
+      <h3>Right-size sidecars</h3>
+      <p>
+        Give sidecars their own resource requests and limits. A proxy or log agent with no limit can make
+        troubleshooting confusing, while a sidecar with an unrealistically low limit can restart and disrupt
+        the pod.
+      </p>
+
+      <h3>Use load tests and failure reviews</h3>
+      <p>
+        Run load tests with production-like payload sizes and concurrency. After every OOMKilled event,
+        capture the memory graph, request rate, batch size, container limit, node pressure state, and
+        application logs. Over time, this builds a much clearer sizing model.
+      </p>
+
+      <div class="callout">
+        <p>
+          <strong>Good fix:</strong> combine resource tuning with application evidence. A larger memory
+          limit may stop the immediate restart, but the long-term answer comes from understanding why memory
+          reached that point.
+        </p>
+      </div>
+
+      <a class="back-link" href="./index.html">Back to Kubernetes blog</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="container">
+    © 2026 Mayank Yadav • Built with a platform engineering mindset
+  </div>
+</footer>
+</body>
+</html>
