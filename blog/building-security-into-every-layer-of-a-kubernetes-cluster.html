@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Building Security Into Every Layer of a Kubernetes Cluster | Mayank Yadav</title>
+  <meta name="description" content="A defense-in-depth guide to Kubernetes security using identity, RBAC, admission controls, workload hardening, network policy, supply-chain controls, node protection, and audit logs." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<header><div class="container"><nav>
+  <a href="../index.html" class="brand">Mayank<span>.dev</span></a>
+  <div class="nav-links"><a href="../index.html#featured-work">Case Studies</a><a href="../index.html#focus">Focus Areas</a><a href="./index.html">Blog</a><a href="../index.html#contact">Contact</a></div>
+</nav></div></header>
+<main>
+  <section class="hero"><div class="container">
+    <div class="eyebrow">Kubernetes Security</div>
+    <h1>Building Security Into Every Layer of a Kubernetes Cluster</h1>
+    <p class="lede">Kubernetes security is strongest when the platform continuously verifies identities, rejects unsafe workloads, limits network reachability, protects nodes, and records activity for investigation.</p>
+    <div class="meta"><span>Published June 12, 2026</span><span>18 min read</span><span>Kubernetes</span></div>
+  </div></section>
+
+  <section class="content"><div class="container article-body">
+    <div class="callout"><p><strong>Core idea:</strong> no single Kubernetes feature secures a cluster. Build overlapping controls so a compromised credential, vulnerable container, or configuration mistake does not immediately become a cluster-wide incident.</p></div>
+    <div class="card"><h2>Table of Contents</h2><ul class="toc">
+      <li><a href="#model">A Cluster-Native Defense Model</a></li>
+      <li><a href="#identity">Identity and API Authorization</a></li>
+      <li><a href="#admission">Admission and Workload Hardening</a></li>
+      <li><a href="#network">Network and Data Protection</a></li>
+      <li><a href="#supply-chain">Image Supply Chain and Runtime</a></li>
+      <li><a href="#nodes">Control Plane and Node Protection</a></li>
+      <li><a href="#detection">Audit, Detection, and Response</a></li>
+    </ul></div>
+
+    <h2 id="model">A Cluster-Native Defense Model</h2>
+    <p>Cluster-native security uses Kubernetes identities, API objects, admission flow, workload metadata, and runtime signals as enforcement points. It does not mean Kubernetes is secure automatically. It means the platform gives you context-rich places to define and verify security controls.</p>
+    <pre><code class="language-text">Developer or automation
+        |
+        v
+Authentication --> RBAC authorization --> Admission policies
+                                            |
+                                            v
+                                   Approved workload spec
+                                            |
+                                            v
+Image policy --> Scheduler --> Hardened node and container runtime
+                                            |
+                                            v
+NetworkPolicy + service identity + encrypted data
+                                            |
+                                            v
+Audit logs + runtime alerts + incident response</code></pre>
+    <p>Think in terms of prevention, containment, and detection. Prevention blocks unsafe changes. Containment limits blast radius after compromise. Detection shows when controls were bypassed or an authorized action became harmful.</p>
+
+    <h2 id="identity">Identity and API Authorization</h2>
+    <h3>Authenticate humans and workloads separately</h3>
+    <p>Human access should normally use an external identity provider with short-lived credentials and multi-factor authentication. Workloads should use dedicated service accounts. Avoid sharing credentials between teams, applications, or environments because attribution and revocation become difficult.</p>
+
+    <h3>Use least-privilege RBAC</h3>
+    <p>RBAC controls Kubernetes API actions. Grant permissions to groups and service accounts rather than individuals where practical, and prefer namespace-scoped Roles over broad ClusterRoles.</p>
+    <pre><code class="language-yaml">apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: application-reader
+  namespace: payments
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]</code></pre>
+    <p>Permissions such as creating Pods, impersonating identities, binding roles, using privileged workload settings, or reading Secrets are especially sensitive. Review them as escalation paths rather than ordinary administrative conveniences.</p>
+    <pre><code class="language-bash">kubectl auth can-i --list --namespace payments --as=&lt;identity&gt;
+kubectl auth can-i create pods --namespace payments --as=&lt;identity&gt;
+kubectl auth can-i get secrets --namespace payments --as=&lt;identity&gt;</code></pre>
+
+    <h3>Reduce service account exposure</h3>
+    <p>Use one service account per workload and disable automatic API token mounting when the application does not call the Kubernetes API.</p>
+    <pre><code class="language-yaml">spec:
+  serviceAccountName: payments-api
+  automountServiceAccountToken: false</code></pre>
+
+    <h2 id="admission">Admission and Workload Hardening</h2>
+    <p>Admission controls inspect API requests after authentication and authorization but before objects are persisted. They can reject unsafe workloads even when an authorized user accidentally submits them.</p>
+
+    <h3>Enforce Pod Security Standards</h3>
+    <p>Pod Security Admission can enforce a security profile using namespace labels. The restricted profile blocks many high-risk settings. Use audit and warning modes to understand impact before enforcing it broadly.</p>
+    <pre><code class="language-yaml">apiVersion: v1
+kind: Namespace
+metadata:
+  name: payments
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted</code></pre>
+
+    <h3>Harden the container security context</h3>
+    <pre><code class="language-yaml">spec:
+  containers:
+    - name: api
+      image: registry.example.com/payments/api@sha256:&lt;digest&gt;
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        runAsNonRoot: true
+        capabilities:
+          drop:
+            - ALL
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          memory: 512Mi</code></pre>
+    <p>Run as non-root, drop capabilities, block privilege escalation, use a read-only root filesystem where possible, and avoid host namespaces, host paths, privileged mode, and unrestricted device access. Resource controls also help contain denial-of-service behavior.</p>
+
+    <h3>Add policy for organization-specific rules</h3>
+    <p>Use admission policy tooling to require approved registries, image digests, ownership labels, resource requests, safe volume types, and controlled exceptions. Treat exceptions as reviewed, time-bound security decisions.</p>
+
+    <h2 id="network">Network and Data Protection</h2>
+    <h3>Move from open networking to explicit flows</h3>
+    <p>NetworkPolicies restrict Pod ingress and egress when enforced by the cluster's CNI plugin. Start with default deny in a test environment, then add policies for documented application flows, DNS, monitoring, identity, and external dependencies.</p>
+    <pre><code class="language-text">Internet
+   |
+   v
+Gateway namespace
+   |
+   | allowed ingress on API port
+   v
+Application namespace
+   |
+   | allowed database connection only
+   v
+Database namespace
+
+All other namespace-to-namespace flows: denied</code></pre>
+    <p>NetworkPolicy controls reachability, not application authorization. Continue to authenticate callers, authorize actions, and encrypt sensitive traffic.</p>
+
+    <h3>Protect Secrets and sensitive data</h3>
+    <p>Restrict Secret read access, enable encryption at rest for Kubernetes API data, rotate credentials, and consider an external secrets manager for centralized lifecycle control. Never treat base64 encoding as encryption. Keep sensitive values out of images, manifests, logs, and command-line arguments.</p>
+
+    <h3>Encrypt communication where trust boundaries require it</h3>
+    <p>Use TLS at external entry points and for sensitive service-to-service communication. A service mesh can help manage workload identity and mutual TLS, but it adds operational complexity and does not replace RBAC, workload hardening, or secure application design.</p>
+
+    <h2 id="supply-chain">Image Supply Chain and Runtime</h2>
+    <p>Cluster security begins before an image reaches the cluster. Build from trusted minimal bases, scan dependencies and images, produce software bills of materials, sign artifacts, and verify provenance during admission.</p>
+    <pre><code class="language-text">Source review
+    |
+    v
+Controlled CI build --> dependency and image scanning
+    |
+    v
+Signed immutable image digest
+    |
+    v
+Admission verification
+    |
+    v
+Runtime monitoring</code></pre>
+    <ul>
+      <li>Deploy immutable digests instead of mutable tags.</li>
+      <li>Patch base images and dependencies on a defined schedule.</li>
+      <li>Block images with unacceptable risk or unknown provenance.</li>
+      <li>Monitor runtime behavior such as unexpected shells, process execution, file changes, and outbound connections.</li>
+    </ul>
+
+    <h2 id="nodes">Control Plane and Node Protection</h2>
+    <p>Nodes run workload code and hold powerful credentials and network access. A compromised node can affect many Pods, so isolate and minimize the host operating system, patch it promptly, restrict administrative access, and use supported runtime security settings.</p>
+    <ul>
+      <li>Limit access to the Kubernetes API endpoint and administrative network paths.</li>
+      <li>Protect control-plane data stores, backups, certificates, and encryption keys.</li>
+      <li>Use separate node pools for workloads with materially different trust or privilege requirements.</li>
+      <li>Avoid ordinary workloads on control-plane nodes.</li>
+      <li>Restrict cloud instance permissions and metadata service access.</li>
+      <li>Keep kubelet, container runtime, CNI, CSI, and node images patched.</li>
+    </ul>
+    <p>Managed Kubernetes reduces some control-plane maintenance work, but customers still own workload identity, authorization, configuration, images, data, and many node-level decisions.</p>
+
+    <h2 id="detection">Audit, Detection, and Response</h2>
+    <p>Kubernetes audit logs record API activity and are essential for investigating who changed what and when. Send audit, authentication, admission, node, network, and workload signals to a protected central destination with useful retention.</p>
+    <h3>Alert on meaningful behaviors</h3>
+    <ul>
+      <li>New ClusterRoleBindings or bindings to powerful roles.</li>
+      <li>Privileged Pods, host mounts, host namespaces, or new policy exceptions.</li>
+      <li>Secret reads outside normal workload or operator behavior.</li>
+      <li>Interactive exec sessions in production Pods.</li>
+      <li>Disabled security policies, audit logging, or monitoring agents.</li>
+      <li>Unexpected image registries, outbound destinations, or runtime processes.</li>
+    </ul>
+
+    <h3>Prepare an incident workflow</h3>
+    <pre><code class="language-text">Detect --> preserve evidence --> contain identity and workload
+       --> identify affected resources --> rotate credentials
+       --> rebuild from trusted artifacts --> review control gaps</code></pre>
+    <p>Practice revoking users, service accounts, certificates, and cloud identities. Know how to isolate workloads without destroying evidence, and verify that cluster and application backups can restore cleanly.</p>
+
+    <div class="callout"><p><strong>Security review question:</strong> if this workload is compromised, what identity can it use, what API objects can it change, what network destinations can it reach, what data can it read, and which controls will detect it?</p></div>
+    <a class="back-link" href="./index.html">Back to Kubernetes blog</a>
+  </div></section>
+</main>
+<footer><div class="container">© 2026 Mayank Yadav • Built with a platform engineering mindset</div></footer>
+</body>
+</html>

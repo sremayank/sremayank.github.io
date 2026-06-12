@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>From Service VIP to Pod: Tracing Traffic Through Kubernetes | Mayank Yadav</title>
+  <meta name="description" content="Trace Kubernetes traffic from clients to Pods through external load balancers, Gateway or Ingress controllers, Services, EndpointSlices, and the cluster network dataplane." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<header><div class="container"><nav>
+  <a href="../index.html" class="brand">Mayank<span>.dev</span></a>
+  <div class="nav-links"><a href="../index.html#featured-work">Case Studies</a><a href="../index.html#focus">Focus Areas</a><a href="./index.html">Blog</a><a href="../index.html#contact">Contact</a></div>
+</nav></div></header>
+<main>
+  <section class="hero"><div class="container">
+    <div class="eyebrow">Kubernetes Networking</div>
+    <h1>From Service VIP to Pod: Tracing Traffic Through Kubernetes</h1>
+    <p class="lede">Kubernetes traffic rarely passes through one load balancer. A request may cross a cloud load balancer, an HTTP routing layer, a Service virtual IP, and the cluster network dataplane before it reaches a ready Pod.</p>
+    <div class="meta"><span>Published June 12, 2026</span><span>16 min read</span><span>Kubernetes</span></div>
+  </div></section>
+
+  <section class="content"><div class="container article-body">
+    <div class="callout"><p><strong>Useful mental model:</strong> each layer answers a different question. An external load balancer chooses a cluster entry point, Gateway or Ingress chooses an application route, and a Service sends traffic to one of its ready endpoints.</p></div>
+    <div class="card"><h2>Table of Contents</h2><ul class="toc">
+      <li><a href="#layers">The Traffic Distribution Layers</a></li>
+      <li><a href="#inside-cluster">East-West Traffic Inside the Cluster</a></li>
+      <li><a href="#external-traffic">North-South Traffic from Outside</a></li>
+      <li><a href="#controls">Traffic Controls and Tradeoffs</a></li>
+      <li><a href="#troubleshooting">A Layer-by-Layer Troubleshooting Workflow</a></li>
+      <li><a href="#production">Production Design Checklist</a></li>
+    </ul></div>
+
+    <h2 id="layers">The Traffic Distribution Layers</h2>
+    <p>The phrase <em>load balancing</em> can hide several independent mechanisms. Understanding which layer owns a decision makes network failures much easier to diagnose.</p>
+    <pre><code class="language-text">Internet client
+     |
+     v
+External load balancer
+     |
+     v
+Gateway or Ingress controller
+     |
+     v
+Kubernetes Service virtual IP
+     |
+     v
+Cluster dataplane selects a ready endpoint
+     |
+     v
+Application Pod</code></pre>
+    <ul>
+      <li><strong>External load balancer:</strong> exposes an address outside the cluster and distributes traffic to cluster entry points.</li>
+      <li><strong>Gateway or Ingress:</strong> performs application-aware routing using hosts, paths, headers, or other protocol rules.</li>
+      <li><strong>Service:</strong> provides stable discovery and distributes connections across matching ready endpoints.</li>
+      <li><strong>Network dataplane:</strong> implements Service forwarding using technologies such as iptables, IPVS, or eBPF, depending on the cluster.</li>
+    </ul>
+    <p>A Kubernetes Service is not necessarily a proxy process that every packet physically passes through. Its ClusterIP is a virtual address. The node networking implementation programs rules that translate or route traffic toward an endpoint.</p>
+
+    <h2 id="inside-cluster">East-West Traffic Inside the Cluster</h2>
+    <p>East-west traffic moves between workloads inside the cluster. A client normally calls a Service DNS name rather than a Pod IP because Pod addresses change during scaling, rescheduling, and rollouts.</p>
+    <pre><code class="language-text">frontend Pod
+     |
+     | DNS lookup: api.production.svc.cluster.local
+     v
+Service ClusterIP: 10.96.18.42:80
+     |
+     | dataplane chooses an EndpointSlice address
+     v
+api Pod: 10.244.3.17:8080</code></pre>
+
+    <h3>Services discover endpoints through labels</h3>
+    <pre><code class="language-yaml">apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: production
+spec:
+  selector:
+    app: api
+  ports:
+    - name: http
+      port: 80
+      targetPort: http</code></pre>
+    <p>The Service selector identifies Pods with <code>app: api</code>. The control plane publishes eligible addresses in EndpointSlices. Readiness matters: unready Pods are normally removed from serving endpoints so new traffic does not reach an application that cannot safely handle it.</p>
+    <pre><code class="language-bash">kubectl get service api -n production
+kubectl get endpointslices -n production \
+  -l kubernetes.io/service-name=api
+kubectl get pods -n production -l app=api -o wide</code></pre>
+
+    <h3>Distribution is usually connection-oriented</h3>
+    <p>Service traffic distribution does not guarantee that every Pod receives exactly the same number of requests. Long-lived HTTP keep-alive, HTTP/2, gRPC, database connections, and WebSockets can keep many requests on one selected backend. If even request distribution matters, use application-aware proxying, tune connection behavior, or design the application to tolerate uneven load.</p>
+
+    <h2 id="external-traffic">North-South Traffic from Outside</h2>
+    <p>North-south traffic enters or leaves the cluster. A <code>LoadBalancer</code> Service commonly asks the infrastructure provider to create an external or private load balancer. The exact implementation varies by cloud provider and cluster platform.</p>
+    <pre><code class="language-yaml">apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: ingress-system
+spec:
+  type: LoadBalancer
+  selector:
+    app: gateway
+  ports:
+    - name: https
+      port: 443
+      targetPort: 8443</code></pre>
+    <pre><code class="language-text">Client
+  |
+  v
+Cloud or infrastructure load balancer
+  |
+  v
+Gateway controller Pods
+  |
+  +-- api.example.com  --> api Service  --> api Pods
+  |
+  +-- shop.example.com --> shop Service --> shop Pods</code></pre>
+    <p>Gateway API or Ingress lets one routing layer expose multiple HTTP applications. This is often more economical and operationally consistent than provisioning a dedicated cloud load balancer for every application Service.</p>
+    <p>The exact backend path is implementation-specific. Some Gateway and Ingress controllers send traffic through the Service virtual IP, while others watch EndpointSlices and proxy directly to Pod addresses. Inspect the controller documentation and metrics when the distinction matters.</p>
+
+    <h3>Service types expose different boundaries</h3>
+    <ul>
+      <li><strong>ClusterIP:</strong> stable address reachable inside the cluster.</li>
+      <li><strong>NodePort:</strong> exposes a port on every eligible node, commonly used behind another load balancer.</li>
+      <li><strong>LoadBalancer:</strong> requests an infrastructure load balancer and usually builds on Service networking.</li>
+      <li><strong>Headless Service:</strong> publishes endpoint addresses through DNS without a ClusterIP, allowing clients to choose endpoints directly.</li>
+    </ul>
+
+    <h2 id="controls">Traffic Controls and Tradeoffs</h2>
+    <h3>Preserve client source IP when required</h3>
+    <p>For a LoadBalancer or NodePort Service, <code>externalTrafficPolicy: Local</code> can preserve the original client source IP by sending external traffic only to endpoints local to the receiving node. The tradeoff is that traffic can become uneven when nodes run different numbers of Pods, and nodes without a local endpoint cannot serve application traffic.</p>
+    <pre><code class="language-yaml">spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local</code></pre>
+    <p>With <code>externalTrafficPolicy: Cluster</code>, traffic can reach endpoints anywhere in the cluster, usually improving distribution but potentially adding another network hop and obscuring the source address.</p>
+
+    <h3>Use session affinity only when necessary</h3>
+    <p><code>sessionAffinity: ClientIP</code> attempts to keep a client IP connected to the same endpoint for a period. It can help legacy stateful applications, but it also creates uneven load and does not replace durable shared session storage.</p>
+
+    <h3>Account for topology</h3>
+    <p>Sending traffic to nearby endpoints can reduce latency and cross-zone cost. Topology-aware routing and traffic policies can influence locality, but they need enough healthy endpoints in each zone. Availability should remain more important than avoiding a cross-zone hop.</p>
+
+    <h3>Health checks exist at multiple layers</h3>
+    <p>Application readiness controls whether a Pod is an eligible Service endpoint. An external load balancer may separately check nodes or gateway endpoints. Gateway controllers can also perform backend health checks. A failure at one layer can remove traffic even while another layer appears healthy.</p>
+
+    <h2 id="troubleshooting">A Layer-by-Layer Troubleshooting Workflow</h2>
+    <h3>1. Confirm the application is healthy</h3>
+    <pre><code class="language-bash">kubectl get pods -n production -l app=api
+kubectl describe pod &lt;pod-name&gt; -n production
+kubectl logs &lt;pod-name&gt; -n production
+kubectl exec &lt;pod-name&gt; -n production -- curl -v http://localhost:8080/health</code></pre>
+    <p>If the application does not answer inside its own container, the load-balancing layer is not the first problem to solve.</p>
+
+    <h3>2. Confirm Service selection and endpoints</h3>
+    <pre><code class="language-bash">kubectl describe service api -n production
+kubectl get pods -n production --show-labels
+kubectl get endpointslices -n production \
+  -l kubernetes.io/service-name=api -o yaml</code></pre>
+    <p>No endpoints usually means the selector does not match or Pods are not ready. Incorrect endpoint ports usually point to a mismatch between <code>targetPort</code> and the container's listening port.</p>
+
+    <h3>3. Test Service DNS and ClusterIP</h3>
+    <pre><code class="language-bash">kubectl run network-test -n production --rm -it \
+  --image=curlimages/curl --restart=Never -- sh
+
+nslookup api
+curl -v http://api/health</code></pre>
+    <p>If DNS fails, inspect cluster DNS. If DNS succeeds but the Service fails, inspect Service rules, EndpointSlices, NetworkPolicies, and the CNI or Service dataplane.</p>
+
+    <h3>4. Inspect the external routing layer</h3>
+    <pre><code class="language-bash">kubectl get service -n ingress-system
+kubectl get gateway,httproute -A
+kubectl get ingress -A
+kubectl logs -n ingress-system deploy/&lt;controller-name&gt;</code></pre>
+    <p>Check the external address, listener configuration, routes, TLS certificates, backend references, controller status, health checks, firewall rules, and provider events.</p>
+
+    <h2 id="production">Production Design Checklist</h2>
+    <ul>
+      <li>Draw the complete traffic path, including every health check and network boundary.</li>
+      <li>Use readiness probes so broken Pods leave Service endpoints before receiving traffic.</li>
+      <li>Use Gateway API or Ingress for shared HTTP routing and Services for stable backend discovery.</li>
+      <li>Monitor endpoint counts, request distribution, connection duration, retries, and zone balance.</li>
+      <li>Test node, zone, gateway, and backend failures rather than only normal traffic.</li>
+      <li>Document source-IP requirements before choosing external traffic policies.</li>
+      <li>Use NetworkPolicies and TLS controls alongside routing; reachability is not authorization.</li>
+    </ul>
+
+    <div class="callout"><p><strong>When traffic fails:</strong> start at the Pod and move outward one layer at a time. This prevents a healthy cloud load balancer from distracting you from an empty EndpointSlice, or a healthy Service from distracting you from a broken Gateway route.</p></div>
+    <a class="back-link" href="./index.html">Back to Kubernetes blog</a>
+  </div></section>
+</main>
+<footer><div class="container">© 2026 Mayank Yadav • Built with a platform engineering mindset</div></footer>
+</body>
+</html>
