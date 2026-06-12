@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to Connect Kubernetes Pods to Persistent Storage | Mayank Yadav</title>
+  <meta name="description" content="A detailed guide to connecting Kubernetes Pods to persistent storage with PersistentVolumes, PersistentVolumeClaims, StorageClasses, access modes, StatefulSets, and troubleshooting." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<header><div class="container"><nav>
+  <a href="../index.html" class="brand">Mayank<span>.dev</span></a>
+  <div class="nav-links"><a href="../index.html#featured-work">Case Studies</a><a href="../index.html#focus">Focus Areas</a><a href="./index.html">Blog</a><a href="../index.html#contact">Contact</a></div>
+</nav></div></header>
+<main>
+  <section class="hero"><div class="container">
+    <div class="eyebrow">Kubernetes Storage</div>
+    <h1>How to Connect Kubernetes Pods to Persistent Storage</h1>
+    <p class="lede">Container filesystems are temporary. Persistent storage keeps application data beyond a Pod restart or replacement by separating storage lifecycle from Pod lifecycle.</p>
+    <div class="meta"><span>Published June 12, 2026</span><span>16 min read</span><span>Kubernetes</span></div>
+  </div></section>
+
+  <section class="content"><div class="container article-body">
+    <div class="callout"><p><strong>Core pattern:</strong> a Pod mounts a PersistentVolumeClaim. The claim requests capacity and access characteristics. Kubernetes binds it to a suitable PersistentVolume, often dynamically created by a StorageClass and CSI driver.</p></div>
+    <div class="card"><h2>Table of Contents</h2><ul class="toc">
+      <li><a href="#model">The Kubernetes Storage Model</a></li>
+      <li><a href="#example">Connect a Pod to Storage</a></li>
+      <li><a href="#statefulsets">Storage for Multiple Replicas</a></li>
+      <li><a href="#lifecycle">Lifecycle and Data Safety</a></li>
+      <li><a href="#troubleshoot">Troubleshooting</a></li>
+    </ul></div>
+
+    <h2 id="model">The Kubernetes Storage Model</h2>
+    <ul>
+      <li><strong>PersistentVolume (PV):</strong> a cluster storage resource backed by a disk, filesystem, or storage service.</li>
+      <li><strong>PersistentVolumeClaim (PVC):</strong> a namespace-scoped request for storage made by a workload.</li>
+      <li><strong>StorageClass:</strong> describes a storage tier and how a CSI driver should provision it.</li>
+      <li><strong>CSI driver:</strong> integrates Kubernetes with the underlying storage provider.</li>
+    </ul>
+    <p>With dynamic provisioning, you normally create a PVC and let its StorageClass create the PV. Static provisioning is useful when an administrator has already created a volume that must be matched to a claim.</p>
+
+    <h3>Understand access modes</h3>
+    <ul>
+      <li><strong>ReadWriteOnce (RWO):</strong> read-write by a single node.</li>
+      <li><strong>ReadOnlyMany (ROX):</strong> read-only by many nodes.</li>
+      <li><strong>ReadWriteMany (RWX):</strong> read-write by many nodes.</li>
+      <li><strong>ReadWriteOncePod (RWOP):</strong> read-write by a single Pod where supported.</li>
+    </ul>
+    <p>Access modes describe attachment capabilities, not a complete application locking system. Support depends on the CSI driver and storage backend. For example, many cloud block disks support RWO but not RWX.</p>
+
+    <h2 id="example">Connect a Pod to Storage</h2>
+    <h3>1. Inspect available StorageClasses</h3>
+    <pre><code class="language-bash">kubectl get storageclass
+kubectl describe storageclass &lt;storage-class-name&gt;</code></pre>
+    <p>Identify the default class, provisioner, reclaim policy, volume binding mode, and whether volume expansion is allowed. A class using <code>WaitForFirstConsumer</code> waits until a Pod is scheduled before provisioning storage, which helps choose the correct zone.</p>
+
+    <h3>2. Create a PersistentVolumeClaim</h3>
+    <pre><code class="language-yaml">apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: app-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 10Gi</code></pre>
+    <p>Omit <code>storageClassName</code> to use the cluster's default StorageClass. Set it to an empty string only when you intentionally want no dynamic StorageClass selection.</p>
+
+    <h3>3. Mount the claim into a Pod</h3>
+    <pre><code class="language-yaml">apiVersion: v1
+kind: Pod
+metadata:
+  name: storage-demo
+spec:
+  containers:
+    - name: app
+      image: nginx:1.27
+      volumeMounts:
+        - name: data
+          mountPath: /usr/share/nginx/html
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: app-data</code></pre>
+    <p>The <code>volumes</code> section connects the Pod to the claim. The <code>volumeMounts</code> section places that volume inside a particular container. The Pod and PVC must be in the same namespace.</p>
+
+    <h3>4. Apply and verify</h3>
+    <pre><code class="language-bash">kubectl apply -f pvc.yaml
+kubectl get pvc app-data
+kubectl apply -f pod.yaml
+kubectl get pod storage-demo
+kubectl exec storage-demo -- sh -c 'echo persistent-data &gt; /usr/share/nginx/html/index.html'
+kubectl delete pod storage-demo
+kubectl apply -f pod.yaml
+kubectl exec storage-demo -- cat /usr/share/nginx/html/index.html</code></pre>
+    <p>The recreated Pod mounts the same claim, so the file remains. This demonstrates persistence across Pod replacement, but it is not a substitute for a backup.</p>
+
+    <h2 id="statefulsets">Storage for Multiple Replicas</h2>
+    <p>A Deployment with several replicas should not casually mount one RWO claim. Pods may land on different nodes, and applications may corrupt data when sharing a filesystem they were not designed to share. StatefulSets can create one claim per replica using <code>volumeClaimTemplates</code>.</p>
+    <pre><code class="language-yaml">apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: database
+spec:
+  serviceName: database
+  replicas: 3
+  selector:
+    matchLabels:
+      app: database
+  template:
+    metadata:
+      labels:
+        app: database
+    spec:
+      containers:
+        - name: database
+          image: postgres:17
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-credentials
+                  key: password
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 20Gi</code></pre>
+    <p>Each replica receives a distinct PVC, such as <code>data-database-0</code>. The application is still responsible for replication, consistency, failover, and backups.</p>
+
+    <h2 id="lifecycle">Lifecycle and Data Safety</h2>
+    <h3>Know the reclaim policy</h3>
+    <p>A dynamically provisioned PV commonly inherits either <code>Delete</code> or <code>Retain</code> from its StorageClass. With <code>Delete</code>, deleting the PVC can delete the underlying storage. With <code>Retain</code>, an administrator must manually recover or clean up the released volume.</p>
+    <pre><code class="language-bash">kubectl get pv
+kubectl get storageclass \
+  -o custom-columns=NAME:.metadata.name,RECLAIM:.reclaimPolicy,BINDING:.volumeBindingMode</code></pre>
+
+    <h3>Expand storage carefully</h3>
+    <p>If the StorageClass allows expansion, increase the PVC request. Confirm that the CSI driver and filesystem support expansion, then watch PVC conditions and application behavior.</p>
+    <pre><code class="language-bash">kubectl patch pvc app-data \
+  -p '{"spec":{"resources":{"requests":{"storage":"20Gi"}}}}'
+kubectl get pvc app-data -w</code></pre>
+
+    <h3>Back up data independently</h3>
+    <p>A PV protects data from Pod replacement. It does not protect against accidental deletion, corruption, compromised credentials, a failed storage region, or a harmful application migration. Use storage snapshots and application-consistent backups, and regularly test restoration.</p>
+
+    <h2 id="troubleshoot">Troubleshooting</h2>
+    <h3>PVC remains Pending</h3>
+    <pre><code class="language-bash">kubectl describe pvc app-data
+kubectl get storageclass
+kubectl get events --sort-by=.lastTimestamp</code></pre>
+    <p>Common causes include a missing or incorrect StorageClass, no default class, unsupported access mode, unavailable capacity, CSI driver failure, quota limits, and topology constraints. With <code>WaitForFirstConsumer</code>, Pending before a consuming Pod exists can be expected.</p>
+
+    <h3>Pod remains Pending or ContainerCreating</h3>
+    <pre><code class="language-bash">kubectl describe pod &lt;pod-name&gt;
+kubectl describe pvc app-data
+kubectl get volumeattachments</code></pre>
+    <p>Look for failed mount or attach events, zone mismatch, multi-attach errors, node limits, CSI node plugin health, and permission problems. A block volume still attached to an unavailable node may need time or provider-specific recovery before it can attach elsewhere.</p>
+
+    <h3>Application receives permission denied</h3>
+    <p>Check the image's runtime user, filesystem ownership, storage backend permissions, and Pod security context. An <code>fsGroup</code> may help supported volume types, but changing ownership on a large filesystem can slow startup.</p>
+    <pre><code class="language-yaml">spec:
+  securityContext:
+    fsGroup: 2000
+    fsGroupChangePolicy: OnRootMismatch</code></pre>
+
+    <h3>Data disappeared</h3>
+    <p>Confirm that the new Pod mounted the expected PVC and path. Check whether data was accidentally written to the container filesystem, whether a different claim was created, and whether a PVC or PV was deleted. Then inspect snapshots and backups before making further changes.</p>
+
+    <div class="callout"><p><strong>Operational rule:</strong> before deleting a PVC, inspect its bound PV, reclaim policy, snapshots, backups, and restoration plan. PVC deletion can become data deletion.</p></div>
+    <a class="back-link" href="./index.html">Back to Kubernetes blog</a>
+  </div></section>
+</main>
+<footer><div class="container">© 2026 Mayank Yadav • Built with a platform engineering mindset</div></footer>
+</body>
+</html>

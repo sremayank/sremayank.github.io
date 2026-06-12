@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to Protect Kubernetes Using Namespaces | Mayank Yadav</title>
+  <meta name="description" content="A practical guide to protecting Kubernetes workloads with namespaces, RBAC, NetworkPolicy, ResourceQuota, LimitRange, Pod Security Admission, and operational guardrails." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<header><div class="container"><nav>
+  <a href="../index.html" class="brand">Mayank<span>.dev</span></a>
+  <div class="nav-links"><a href="../index.html#featured-work">Case Studies</a><a href="../index.html#focus">Focus Areas</a><a href="./index.html">Blog</a><a href="../index.html#contact">Contact</a></div>
+</nav></div></header>
+<main>
+  <section class="hero"><div class="container">
+    <div class="eyebrow">Kubernetes Security</div>
+    <h1>How to Protect Kubernetes Using Namespaces</h1>
+    <p class="lede">Namespaces organize cluster resources and provide boundaries for access control, policy, quotas, and operations. They become protective when you attach the right controls to them.</p>
+    <div class="meta"><span>Published June 12, 2026</span><span>17 min read</span><span>Kubernetes</span></div>
+  </div></section>
+
+  <section class="content"><div class="container article-body">
+    <div class="callout"><p><strong>Important:</strong> a namespace is not a security boundary by itself. It does not automatically block network traffic, restrict API access, isolate nodes, or prevent privileged Pods. Use namespaces as the place where RBAC, NetworkPolicy, quotas, and admission controls are applied.</p></div>
+    <div class="card"><h2>Table of Contents</h2><ul class="toc">
+      <li><a href="#boundaries">What Namespaces Do and Do Not Protect</a></li>
+      <li><a href="#design">Design a Namespace Strategy</a></li>
+      <li><a href="#rbac">Restrict API Access with RBAC</a></li>
+      <li><a href="#network">Restrict Network Traffic</a></li>
+      <li><a href="#resources">Control Resource Consumption</a></li>
+      <li><a href="#pod-security">Enforce Pod Security</a></li>
+      <li><a href="#operations">Operational Guardrails</a></li>
+    </ul></div>
+
+    <h2 id="boundaries">What Namespaces Do and Do Not Protect</h2>
+    <p>Most Kubernetes workload resources are namespace-scoped, including Pods, Deployments, Services, ConfigMaps, Secrets, Roles, and PersistentVolumeClaims. Namespaces let teams reuse names and give policies a clear scope.</p>
+    <p>Some important resources are cluster-scoped, including Nodes, PersistentVolumes, StorageClasses, ClusterRoles, CustomResourceDefinitions, and namespaces themselves. A user with broad cluster-scoped permissions can cross namespace boundaries.</p>
+    <ul>
+      <li><strong>Namespaces help with:</strong> ownership, RBAC scope, network policy scope, quotas, defaults, policy enforcement, and safer operations.</li>
+      <li><strong>Namespaces do not automatically provide:</strong> network isolation, node isolation, encryption, strong multi-tenancy, or protection from cluster administrators.</li>
+    </ul>
+
+    <h2 id="design">Design a Namespace Strategy</h2>
+    <p>Create namespaces around meaningful ownership and trust boundaries. Common patterns include one namespace per application and environment, such as <code>payments-dev</code>, <code>payments-staging</code>, and <code>payments-prod</code>. Avoid putting unrelated teams in one shared namespace because RBAC, quotas, Secrets, and cleanup become harder to manage safely.</p>
+    <pre><code class="language-yaml">apiVersion: v1
+kind: Namespace
+metadata:
+  name: payments-prod
+  labels:
+    owner: payments-team
+    environment: production
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted</code></pre>
+    <p>Labels make namespaces easier to inventory and can drive policy. Treat the <code>default</code>, <code>kube-system</code>, <code>kube-public</code>, and <code>kube-node-lease</code> namespaces carefully. Application teams should not deploy ordinary workloads into system namespaces.</p>
+
+    <h2 id="rbac">Restrict API Access with RBAC</h2>
+    <p>Role-Based Access Control determines who can perform which Kubernetes API actions. A <code>Role</code> grants permissions inside one namespace. A <code>RoleBinding</code> assigns that Role to users, groups, or service accounts.</p>
+    <pre><code class="language-yaml">apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: deployment-operator
+  namespace: payments-prod
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: payments-team-deployment-operator
+  namespace: payments-prod
+subjects:
+  - kind: Group
+    name: payments-team
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: deployment-operator
+  apiGroup: rbac.authorization.k8s.io</code></pre>
+    <p>Grant the smallest practical set of verbs and resources. Access to create Pods can enable a user to run code under permitted service accounts and mount permitted Secrets. Access to read Secrets directly exposes their contents. Treat both as powerful permissions.</p>
+    <pre><code class="language-bash">kubectl auth can-i update deployments \
+  --namespace payments-prod --as-group payments-team --as alice
+kubectl auth can-i list secrets \
+  --namespace payments-prod --as-group payments-team --as alice</code></pre>
+    <p>Avoid casually binding <code>cluster-admin</code>. Use ClusterRoles only when permissions genuinely need to be reusable or cluster-wide, and use RoleBindings to scope reusable ClusterRoles into individual namespaces where possible.</p>
+
+    <h2 id="network">Restrict Network Traffic</h2>
+    <p>Without NetworkPolicy enforcement, Pods can commonly communicate across namespaces. A NetworkPolicy-capable CNI plugin is required; creating policies has no effect if the network implementation does not enforce them.</p>
+
+    <h3>Start with default deny</h3>
+    <pre><code class="language-yaml">apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: payments-prod
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress</code></pre>
+    <p>This selects every Pod in the namespace and denies ingress and egress unless another policy allows it. Roll out default deny carefully: applications often require DNS, monitoring, identity, database, and external API access.</p>
+
+    <h3>Allow only expected callers</h3>
+    <pre><code class="language-yaml">apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-frontend-to-api
+  namespace: payments-prod
+spec:
+  podSelector:
+    matchLabels:
+      app: payments-api
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: payments-prod
+          podSelector:
+            matchLabels:
+              app: payments-frontend
+      ports:
+        - protocol: TCP
+          port: 8080</code></pre>
+    <p>In one <code>from</code> item, <code>namespaceSelector</code> and <code>podSelector</code> are combined. Separate list items mean either condition can match, which is broader and a common policy mistake.</p>
+
+    <h3>Allow DNS egress</h3>
+    <pre><code class="language-yaml">apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: payments-prod
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53</code></pre>
+    <p>Confirm the actual DNS Pod labels and ports in your cluster before applying this example.</p>
+
+    <h2 id="resources">Control Resource Consumption</h2>
+    <p>A ResourceQuota caps aggregate namespace consumption. It helps prevent one team or compromised workload from consuming unbounded cluster resources.</p>
+    <pre><code class="language-yaml">apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: payments-budget
+  namespace: payments-prod
+spec:
+  hard:
+    requests.cpu: "8"
+    requests.memory: 16Gi
+    limits.cpu: "16"
+    limits.memory: 32Gi
+    pods: "50"
+    services.loadbalancers: "2"
+    persistentvolumeclaims: "10"</code></pre>
+    <p>A LimitRange sets defaults and acceptable boundaries for individual containers or claims. Defaults reduce the chance of workloads being deployed without resource controls.</p>
+    <pre><code class="language-yaml">apiVersion: v1
+kind: LimitRange
+metadata:
+  name: container-defaults
+  namespace: payments-prod
+spec:
+  limits:
+    - type: Container
+      defaultRequest:
+        cpu: 100m
+        memory: 128Mi
+      default:
+        memory: 512Mi
+      max:
+        cpu: "2"
+        memory: 2Gi</code></pre>
+    <pre><code class="language-bash">kubectl describe resourcequota -n payments-prod
+kubectl describe limitrange -n payments-prod</code></pre>
+
+    <h2 id="pod-security">Enforce Pod Security</h2>
+    <p>Pod Security Admission uses namespace labels to enforce Pod Security Standards. The <code>restricted</code> profile blocks many risky settings, including privileged containers and common host access patterns. Use <code>warn</code> and <code>audit</code> first to understand impact before enabling <code>enforce</code>.</p>
+    <pre><code class="language-bash">kubectl label namespace payments-prod \
+  pod-security.kubernetes.io/warn=restricted \
+  pod-security.kubernetes.io/audit=restricted \
+  --overwrite</code></pre>
+    <p>System agents may legitimately require broader privileges. Keep them in tightly controlled namespaces and apply the least permissive profile they can support. Admission policies can add organization-specific rules for image registries, required labels, resource settings, or forbidden capabilities.</p>
+
+    <h2 id="operations">Operational Guardrails</h2>
+    <ul>
+      <li>Set a namespace explicitly in manifests and commands instead of relying on the current context.</li>
+      <li>Give each workload a dedicated service account and set <code>automountServiceAccountToken: false</code> when API access is unnecessary.</li>
+      <li>Keep production and non-production in separate namespaces, and use separate clusters when stronger isolation is required.</li>
+      <li>Audit RoleBindings, ClusterRoleBindings, privileged workloads, policy exceptions, and namespace labels regularly.</li>
+      <li>Encrypt Secrets at rest, restrict read access, and use an external secrets system where appropriate.</li>
+      <li>Test NetworkPolicies from allowed and denied sources after every significant change.</li>
+      <li>Use GitOps or reviewed infrastructure code so namespace controls remain reproducible.</li>
+      <li>Alert when quotas approach limits or required policies disappear.</li>
+    </ul>
+
+    <h3>Verify the namespace as a complete control set</h3>
+    <pre><code class="language-bash">kubectl get role,rolebinding,resourcequota,limitrange,networkpolicy \
+  -n payments-prod
+kubectl get namespace payments-prod --show-labels
+kubectl auth can-i --list -n payments-prod --as=&lt;user&gt;</code></pre>
+    <p>Review the output from the perspective of a compromised workload and a human operator. Ask what each identity can read, create, modify, reach over the network, and consume.</p>
+
+    <div class="callout"><p><strong>Defense-in-depth model:</strong> use namespaces to define ownership, RBAC to control API actions, NetworkPolicy to control traffic, quotas and limits to control consumption, and admission policies to reject unsafe workloads.</p></div>
+    <a class="back-link" href="./index.html">Back to Kubernetes blog</a>
+  </div></section>
+</main>
+<footer><div class="container">© 2026 Mayank Yadav • Built with a platform engineering mindset</div></footer>
+</body>
+</html>

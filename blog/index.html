@@ -6,12 +6,12 @@
   <title>Kubernetes Blog | Mayank Yadav</title>
   <meta
     name="description"
-    content="Detailed Kubernetes guides by Mayank Yadav covering Services, ImagePullBackOff, OOMKilled, troubleshooting, and production operations."
+    content="Detailed Kubernetes guides by Mayank Yadav covering workloads, Services, storage, namespaces, troubleshooting, and production operations."
   />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap"
     rel="stylesheet"
   />
   <link rel="stylesheet" href="./styles.css" />
@@ -37,11 +37,47 @@
       <div class="eyebrow">Kubernetes Operations • Troubleshooting • Platform Engineering</div>
       <h1>Kubernetes Blog</h1>
       <p class="lede">
-        Practical Kubernetes guides for exposing workloads, debugging pod failures, and understanding
-        memory pressure in production-style environments.
+        Practical Kubernetes guides for managing workloads, connecting storage, protecting clusters, and
+        troubleshooting production-style environments.
       </p>
 
       <div class="post-grid">
+        <a class="card post-card" href="./how-to-troubleshoot-unhealthy-kubernetes-daemonsets.html">
+          <h2>How to Troubleshoot Unhealthy Kubernetes DaemonSets</h2>
+          <p>
+            Diagnose missing, unavailable, or crash-looping DaemonSet Pods with a repeatable node-by-node
+            troubleshooting workflow.
+          </p>
+          <span class="read-more">Read guide</span>
+        </a>
+
+        <a class="card post-card" href="./how-to-use-kubernetes-deployments-and-services-to-manage-pods.html">
+          <h2>How to Use Kubernetes Deployments and Services to Manage Pods</h2>
+          <p>
+            Build a resilient stateless application using Deployments for lifecycle management and
+            Services for stable network access.
+          </p>
+          <span class="read-more">Read guide</span>
+        </a>
+
+        <a class="card post-card" href="./how-to-connect-kubernetes-pods-to-persistent-storage.html">
+          <h2>How to Connect Kubernetes Pods to Persistent Storage</h2>
+          <p>
+            Understand PersistentVolumes, claims, StorageClasses, access modes, and safe storage
+            troubleshooting.
+          </p>
+          <span class="read-more">Read guide</span>
+        </a>
+
+        <a class="card post-card" href="./how-to-protect-kubernetes-using-namespaces.html">
+          <h2>How to Protect Kubernetes Using Namespaces</h2>
+          <p>
+            Combine namespaces with RBAC, NetworkPolicy, quotas, limits, and Pod Security Admission to
+            reduce risk.
+          </p>
+          <span class="read-more">Read guide</span>
+        </a>
+
         <a class="card post-card" href="./how-to-use-kubernetes-service-to-expose-your-application.html">
           <h2>How to Use Kubernetes Service to Expose Your Application</h2>
           <p>
