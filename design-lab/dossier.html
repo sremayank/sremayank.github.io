@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Engineering Dossier | Mayank Yadav</title>
+  <meta name="description" content="Prototype engineering dossier for Mayank Yadav." />
+  <style>
+    :root {
+      --ink: #171915;
+      --paper: #e9e5da;
+      --panel: #dcd7ca;
+      --line: #aaa79c;
+      --muted: #65675f;
+      --signal: #e34b27;
+      --dark: #161a17;
+      --acid: #c6ff4a;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font-family: Arial, sans-serif; line-height: 1.5; }
+    a { color: inherit; }
+    .shell { width: min(1260px, calc(100% - 48px)); margin: 0 auto; }
+    .mono { font-family: "SFMono-Regular", Consolas, monospace; text-transform: uppercase; letter-spacing: 0.12em; }
+    header { position: sticky; top: 0; z-index: 5; border-bottom: 1px solid var(--line); background: rgba(233,229,218,0.94); backdrop-filter: blur(12px); }
+    nav { min-height: 64px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 20px; font-size: 0.7rem; font-weight: 700; }
+    .brand { text-decoration: none; }
+    .nav-links { display: flex; gap: 24px; }
+    .nav-links a { text-decoration: none; }
+    .status { justify-self: end; display: flex; align-items: center; gap: 8px; color: var(--muted); }
+    .status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #4e9b3f; }
+    .hero { padding: 72px 0 54px; border-bottom: 1px solid var(--line); }
+    .hero-grid { display: grid; grid-template-columns: 1.35fr 0.65fr; gap: 70px; }
+    .kicker { margin-bottom: 22px; color: var(--signal); font-size: 0.7rem; font-weight: 800; }
+    h1 { max-width: 900px; margin: 0; font: 500 clamp(4rem, 9vw, 8.8rem)/0.83 Georgia, serif; letter-spacing: -0.075em; }
+    h1 em { color: var(--signal); font-weight: 500; }
+    .hero-side { align-self: end; }
+    .hero-side p { margin: 0 0 26px; color: var(--muted); font-size: 1.03rem; }
+    .hero-side a, .project-link { display: inline-block; border-bottom: 2px solid var(--signal); padding-bottom: 4px; font-size: 0.72rem; font-weight: 800; text-decoration: none; }
+    .proof { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--line); }
+    .proof div { padding: 26px 22px; border-right: 1px solid var(--line); }
+    .proof div:last-child { border-right: 0; }
+    .proof strong { display: block; font: 500 2rem/1 Georgia, serif; letter-spacing: -0.04em; }
+    .proof span { display: block; margin-top: 8px; color: var(--muted); font-size: 0.72rem; }
+    .section-head { display: grid; grid-template-columns: 0.32fr 1fr; gap: 36px; padding: 70px 0 30px; }
+    .section-head span { color: var(--signal); font-size: 0.68rem; font-weight: 800; }
+    .section-head h2 { max-width: 760px; margin: 0; font: 500 clamp(2.5rem, 5vw, 5.2rem)/0.95 Georgia, serif; letter-spacing: -0.06em; }
+    .case { display: grid; grid-template-columns: 0.32fr 1fr; gap: 36px; padding: 34px 0 80px; border-top: 1px solid var(--line); }
+    .case-index { color: var(--muted); font-size: 0.7rem; font-weight: 700; }
+    .case-main h3 { max-width: 850px; margin: 0 0 34px; font: 500 clamp(2.2rem, 5vw, 4.8rem)/0.96 Georgia, serif; letter-spacing: -0.055em; }
+    .case-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+    .brief { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); }
+    .brief div { background: var(--paper); padding: 18px; }
+    .brief b { display: block; margin-bottom: 7px; color: var(--signal); font-size: 0.64rem; }
+    .brief p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+    .diagram { min-height: 350px; padding: 20px; background: var(--dark); color: #eee; display: grid; align-content: space-between; }
+    .diagram-top { display: flex; justify-content: space-between; color: #858c84; font-size: 0.62rem; }
+    .flow { display: grid; grid-template-columns: 1fr 28px 1fr 28px 1fr; align-items: center; gap: 4px; }
+    .node { border: 1px solid #4f554f; padding: 18px 10px; color: #d7dbd5; font: 0.66rem/1.5 monospace; text-align: center; }
+    .node.active { border-color: var(--acid); color: var(--acid); }
+    .arrow { color: #687067; text-align: center; }
+    .diagram-note { max-width: 400px; color: #9ca39b; font: 0.68rem/1.6 monospace; }
+    .decision-log { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin-top: 30px; background: var(--line); border: 1px solid var(--line); }
+    .decision-log div { min-height: 150px; padding: 20px; background: var(--panel); }
+    .decision-log span { color: var(--signal); font-size: 0.62rem; font-weight: 800; }
+    .decision-log h4 { margin: 28px 0 8px; font-size: 0.9rem; }
+    .decision-log p { margin: 0; color: var(--muted); font-size: 0.78rem; }
+    .project-link { margin-top: 26px; }
+    .capabilities { padding-bottom: 80px; }
+    .cap-grid { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); }
+    .cap-grid article { min-height: 250px; padding: 22px; border-right: 1px solid var(--line); }
+    .cap-grid article:last-child { border: 0; }
+    .cap-grid span { color: var(--signal); font-size: 0.62rem; font-weight: 800; }
+    .cap-grid h3 { margin: 60px 0 12px; font: 500 1.45rem/1.05 Georgia, serif; }
+    .cap-grid p { margin: 0; color: var(--muted); font-size: 0.8rem; }
+    .contact { background: var(--dark); color: #f0eee7; padding: 72px 0; }
+    .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; }
+    .contact h2 { max-width: 650px; margin: 0; font: 500 clamp(3rem, 7vw, 7rem)/0.88 Georgia, serif; letter-spacing: -0.07em; }
+    .contact h2 em { color: var(--acid); font-weight: 500; }
+    .contact aside { align-self: end; }
+    .contact p { color: #9ca39b; }
+    .contact a { color: var(--acid); font: 0.72rem/2 monospace; }
+    footer { padding: 18px 0; background: var(--dark); border-top: 1px solid #333833; color: #737a73; font-size: 0.62rem; }
+    @media (max-width: 900px) {
+      .hero-grid, .section-head, .case, .case-layout, .contact-grid { grid-template-columns: 1fr; }
+      .proof, .cap-grid { grid-template-columns: 1fr 1fr; }
+      .proof div:nth-child(2) { border-right: 0; }
+      .cap-grid article:nth-child(2) { border-right: 0; }
+      .nav-links { display: none; }
+      nav { grid-template-columns: 1fr 1fr; }
+      .status { display: none; }
+      .hero { padding-top: 48px; }
+    }
+    @media (max-width: 560px) {
+      .shell { width: min(100% - 28px, 1260px); }
+      h1 { font-size: 3.6rem; }
+      .proof, .cap-grid, .decision-log { grid-template-columns: 1fr; }
+      .proof div, .cap-grid article { border-right: 0; border-bottom: 1px solid var(--line); }
+      .flow { grid-template-columns: 1fr; }
+      .arrow { transform: rotate(90deg); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <nav class="shell mono">
+      <a class="brand" href="./index.html">MY / Engineering Dossier</a>
+      <div class="nav-links"><a href="#work">Work</a><a href="#practice">Practice</a><a href="#contact">Contact</a></div>
+      <div class="status">Open to platform challenges</div>
+    </nav>
+  </header>
+  <main>
+    <section class="hero">
+      <div class="shell hero-grid">
+        <div>
+          <div class="kicker mono">Platform engineering / Kubernetes / Cloud systems</div>
+          <h1>I make complex platforms <em>operable.</em></h1>
+        </div>
+        <aside class="hero-side">
+          <p>Mayank Yadav is a Platform and DevOps Engineer designing reliable cloud platforms, safer delivery systems, and practical operating models across AWS and GCP.</p>
+          <a class="mono" href="#work">Review selected work -></a>
+        </aside>
+      </div>
+    </section>
+    <div class="shell proof">
+      <div><strong>13+</strong><span>Years in platform and DevOps engineering</span></div>
+      <div><strong>18+</strong><span>Clusters managed and modernised</span></div>
+      <div><strong>2</strong><span>Cloud ecosystems: AWS and GCP</span></div>
+      <div><strong>1</strong><span>Operating principle: make change repeatable</span></div>
+    </div>
+
+    <section class="shell" id="work">
+      <div class="section-head">
+        <span class="mono">01 / Selected systems</span>
+        <h2>Evidence over adjectives.</h2>
+      </div>
+      <article class="case">
+        <div class="case-index mono">Case 001<br />Platform modernisation</div>
+        <div class="case-main">
+          <h3>Multi-cluster GKE, made predictable.</h3>
+          <div class="case-layout">
+            <div class="brief">
+              <div><b class="mono">Condition</b><p>Cluster provisioning and upgrades varied across GCP projects, creating drift and avoidable change risk.</p></div>
+              <div><b class="mono">Intervention</b><p>Reusable Terraform, pull-request workflows, CI policy checks, and a blue-green cluster upgrade model.</p></div>
+              <div><b class="mono">Operational result</b><p>Platform changes became reviewable, repeatable, and easier to roll back.</p></div>
+            </div>
+            <div class="diagram">
+              <div class="diagram-top mono"><span>Controlled upgrade path</span><span>GKE / 01</span></div>
+              <div class="flow"><div class="node">CURRENT<br />CLUSTER</div><div class="arrow">-></div><div class="node active">VALIDATE<br />+ POLICY</div><div class="arrow">-></div><div class="node">GREEN<br />CLUSTER</div></div>
+              <div class="diagram-note">Terraform source of truth -> CI checks -> platform workload validation -> planned cutover</div>
+            </div>
+          </div>
+          <div class="decision-log">
+            <div><span class="mono">Decision 01</span><h4>Configuration as evidence</h4><p>Environment differences moved into reviewed inputs; shared behaviour stayed standardised.</p></div>
+            <div><span class="mono">Decision 02</span><h4>Policy before apply</h4><p>Formatting, validation, and OPA checks caught unsafe changes during review.</p></div>
+            <div><span class="mono">Decision 03</span><h4>Replace, then cut over</h4><p>Parallel clusters created a cleaner rollback path for high-risk upgrades.</p></div>
+          </div>
+          <a class="project-link mono" href="https://github.com/sremayank/tf-gke-management">Inspect reference implementation -></a>
+        </div>
+      </article>
+
+      <article class="case">
+        <div class="case-index mono">Case 002<br />Event-driven scaling</div>
+        <div class="case-main">
+          <h3>Capacity that follows demand, not habit.</h3>
+          <div class="case-layout">
+            <div class="diagram">
+              <div class="diagram-top mono"><span>Demand signal path</span><span>KEDA / 02</span></div>
+              <div class="flow"><div class="node">QUEUE<br />DEPTH</div><div class="arrow">-></div><div class="node active">KEDA<br />POLICY</div><div class="arrow">-></div><div class="node">WORKER<br />REPLICAS</div></div>
+              <div class="diagram-note">Per-tenant limits and fallback behaviour keep burst response inside operational guardrails.</div>
+            </div>
+            <div class="brief">
+              <div><b class="mono">Condition</b><p>Static scaling left workloads over-provisioned at rest and slow during queue-backed bursts.</p></div>
+              <div><b class="mono">Intervention</b><p>KEDA ScaledObjects tied consumer capacity to queue depth and external demand signals.</p></div>
+              <div><b class="mono">Operational result</b><p>Faster burst response, less idle compute, and clearer tenant-level capacity controls.</p></div>
+            </div>
+          </div>
+          <a class="project-link mono" href="https://github.com/sremayank/keda-event-driven-autoscaling-demo">Inspect working demo -></a>
+        </div>
+      </article>
+    </section>
+
+    <section class="shell capabilities" id="practice">
+      <div class="section-head">
+        <span class="mono">02 / Engineering practice</span>
+        <h2>Systems I know how to improve.</h2>
+      </div>
+      <div class="cap-grid">
+        <article><span class="mono">A / Foundations</span><h3>Cloud platforms</h3><p>Shared infrastructure across AWS and GCP, built for governance and operational readiness.</p></article>
+        <article><span class="mono">B / Runtime</span><h3>Kubernetes reliability</h3><p>Multi-cluster operations, safe upgrades, delivery patterns, and workload scaling.</p></article>
+        <article><span class="mono">C / Change</span><h3>GitOps delivery</h3><p>Guardrails, policy enforcement, rollout visibility, and safer change management.</p></article>
+        <article><span class="mono">D / Operations</span><h3>Toil reduction</h3><p>Validation systems, incident tooling, alerting, and practical platform automation.</p></article>
+      </div>
+    </section>
+  </main>
+  <section class="contact" id="contact">
+    <div class="shell contact-grid">
+      <h2>Build the system. Improve the <em>operating model.</em></h2>
+      <aside><p>Available for conversations about platform engineering, Kubernetes reliability, delivery automation, and cloud infrastructure.</p><a href="mailto:mayankkumaryadav01@gmail.com">mayankkumaryadav01@gmail.com</a><br /><a href="https://github.com/sremayank">github.com/sremayank</a></aside>
+    </div>
+  </section>
+  <footer><div class="shell mono">Prototype 01 / Engineering Dossier / Existing site untouched</div></footer>
+</body>
+</html>
