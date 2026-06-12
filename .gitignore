@@ -40,3 +40,4 @@ terraform.rc
 __pycache__/
 *.py[cod]
 .DS_Store
+.idea/
