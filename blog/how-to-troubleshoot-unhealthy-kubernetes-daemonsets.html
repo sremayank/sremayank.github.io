@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to Troubleshoot Unhealthy Kubernetes DaemonSets | Mayank Yadav</title>
+  <meta name="description" content="A practical guide to troubleshooting unhealthy Kubernetes DaemonSets, including scheduling gaps, crash loops, rollout failures, node conditions, taints, and resource pressure." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<header><div class="container"><nav>
+  <a href="../index.html" class="brand">Mayank<span>.dev</span></a>
+  <div class="nav-links"><a href="../index.html#featured-work">Case Studies</a><a href="../index.html#focus">Focus Areas</a><a href="./index.html">Blog</a><a href="../index.html#contact">Contact</a></div>
+</nav></div></header>
+
+<main>
+  <section class="hero"><div class="container">
+    <div class="eyebrow">Kubernetes Troubleshooting</div>
+    <h1>How to Troubleshoot Unhealthy Kubernetes DaemonSets</h1>
+    <p class="lede">DaemonSets run node-level agents such as log collectors, monitoring exporters, network components, and security tools. When one becomes unhealthy, the failure is often tied to a specific node, scheduling rule, host dependency, or rollout.</p>
+    <div class="meta"><span>Published June 12, 2026</span><span>14 min read</span><span>Kubernetes</span></div>
+  </div></section>
+
+  <section class="content"><div class="container article-body">
+    <div class="callout"><p><strong>First move:</strong> compare <code>DESIRED</code>, <code>CURRENT</code>, <code>READY</code>, <code>UP-TO-DATE</code>, and <code>AVAILABLE</code> with <code>kubectl get daemonset -n &lt;namespace&gt;</code>. Those numbers tell you whether the problem is scheduling, startup, readiness, or rollout progress.</p></div>
+
+    <div class="card"><h2>Table of Contents</h2><ul class="toc">
+      <li><a href="#how-daemonsets-work">How DaemonSets Work</a></li>
+      <li><a href="#diagnosis">A Fast Diagnostic Workflow</a></li>
+      <li><a href="#common-failures">Common Failure Patterns</a></li>
+      <li><a href="#rollouts">Troubleshooting Rollouts</a></li>
+      <li><a href="#prevention">Production Prevention Checklist</a></li>
+    </ul></div>
+
+    <h2 id="how-daemonsets-work">How DaemonSets Work</h2>
+    <p>A DaemonSet ensures that eligible nodes run a copy of a Pod. Unlike a Deployment, which aims for a replica count, a DaemonSet calculates its desired count from nodes that match its scheduling rules. Adding an eligible node creates another Pod; removing a node removes that need.</p>
+    <p>This makes DaemonSet health inseparable from node health. A single broken Pod may indicate a host filesystem, kernel, runtime, architecture, taint, capacity, or networking issue on that node rather than a cluster-wide application bug.</p>
+
+    <h3>Read the status columns</h3>
+    <pre><code class="language-bash">kubectl get daemonset -n kube-system
+kubectl get daemonset &lt;name&gt; -n &lt;namespace&gt; -o wide</code></pre>
+    <ul>
+      <li><strong>DESIRED:</strong> eligible nodes that should run the Pod.</li>
+      <li><strong>CURRENT:</strong> nodes currently running or creating the Pod.</li>
+      <li><strong>READY:</strong> Pods passing readiness checks.</li>
+      <li><strong>UP-TO-DATE:</strong> Pods using the latest Pod template.</li>
+      <li><strong>AVAILABLE:</strong> Pods ready for at least the configured minimum ready time.</li>
+    </ul>
+
+    <h2 id="diagnosis">A Fast Diagnostic Workflow</h2>
+    <h3>1. Inspect the DaemonSet and its events</h3>
+    <pre><code class="language-bash">kubectl describe daemonset &lt;name&gt; -n &lt;namespace&gt;
+kubectl get events -n &lt;namespace&gt; --sort-by=.lastTimestamp</code></pre>
+    <p>Check selectors, node selectors, affinity, tolerations, update strategy, image, desired count, and recent events. Events often reveal failed scheduling, image pull errors, admission policy rejection, or rollout problems.</p>
+
+    <h3>2. List every Pod with its node</h3>
+    <pre><code class="language-bash">kubectl get pods -n &lt;namespace&gt; \
+  -l app=&lt;label-value&gt; -o wide
+kubectl get pods -n &lt;namespace&gt; \
+  -l app=&lt;label-value&gt; --field-selector=status.phase!=Running</code></pre>
+    <p>Look for patterns. One failing Pod suggests a node-specific issue. Every Pod failing suggests a shared image, configuration, permission, or application problem. Missing Pods suggest scheduling eligibility rather than container startup.</p>
+
+    <h3>3. Describe and read logs from an unhealthy Pod</h3>
+    <pre><code class="language-bash">kubectl describe pod &lt;pod-name&gt; -n &lt;namespace&gt;
+kubectl logs &lt;pod-name&gt; -n &lt;namespace&gt; --all-containers
+kubectl logs &lt;pod-name&gt; -n &lt;namespace&gt; --all-containers --previous</code></pre>
+    <p>The Events section explains scheduling and mount failures. Current logs explain live failures. Previous logs are essential when a container is repeatedly restarting.</p>
+
+    <h3>4. Compare eligible nodes with scheduled Pods</h3>
+    <pre><code class="language-bash">kubectl get nodes --show-labels
+kubectl describe node &lt;node-name&gt;
+kubectl get pods -n &lt;namespace&gt; -l app=&lt;label-value&gt; \
+  -o custom-columns=POD:.metadata.name,NODE:.spec.nodeName,READY:.status.containerStatuses[*].ready</code></pre>
+    <p>Check whether labels match the DaemonSet's <code>nodeSelector</code> or affinity, whether taints are tolerated, and whether the node is Ready. Also inspect memory, disk, PID pressure, allocatable resources, and architecture.</p>
+
+    <h2 id="common-failures">Common Failure Patterns</h2>
+    <h3>DESIRED is lower than the node count</h3>
+    <p>This can be correct. DaemonSets only target eligible nodes. Review <code>nodeSelector</code>, node affinity, and taints. Control-plane nodes commonly have taints that require explicit tolerations. Do not add broad tolerations until you confirm the agent is safe and necessary on those nodes.</p>
+    <pre><code class="language-yaml">spec:
+  template:
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+        - operator: Exists
+          effect: NoSchedule</code></pre>
+
+    <h3>DESIRED is correct, but CURRENT is lower</h3>
+    <p>Pods are not being created or scheduled everywhere. Look for admission policy failures, insufficient CPU or memory, untolerated taints, host port conflicts, and namespace quotas. DaemonSet Pods still need enough node capacity to schedule.</p>
+
+    <h3>CURRENT is correct, but READY is lower</h3>
+    <p>The Pods reached nodes but did not become ready. Check container logs, readiness probes, mounted configuration, Secrets, service accounts, host paths, and host networking. Node agents often depend on paths such as <code>/var/log</code> or the container runtime socket; a path can differ across node images.</p>
+
+    <h3>CrashLoopBackOff on one node</h3>
+    <p>Compare that node with healthy nodes. Check its operating system image, kernel, CPU architecture, runtime, mounted paths, available disk, and local ports. A multi-architecture cluster also requires an image manifest supporting every targeted architecture.</p>
+    <pre><code class="language-bash">kubectl get node &lt;node-name&gt; \
+  -o jsonpath='{.status.nodeInfo.osImage}{"\n"}{.status.nodeInfo.architecture}{"\n"}{.status.nodeInfo.containerRuntimeVersion}{"\n"}'
+kubectl top node &lt;node-name&gt;</code></pre>
+
+    <h3>Pending because of a host port conflict</h3>
+    <p>A DaemonSet using <code>hostPort</code> can schedule only if that port is free on the target node. Describe the pending Pod and identify the conflicting workload. Prefer ordinary Pod networking unless the agent truly requires a host port.</p>
+
+    <h3>ImagePullBackOff or permission failures</h3>
+    <p>Verify the image tag, registry access, pull secret namespace, service account, security context, and required capabilities. Privileged node agents may also be rejected by Pod Security Admission or another admission policy.</p>
+
+    <h2 id="rollouts">Troubleshooting Rollouts</h2>
+    <p>With the default <code>RollingUpdate</code> strategy, Kubernetes replaces DaemonSet Pods gradually. A broken image or readiness probe can stall the rollout and leave a mix of old and new versions.</p>
+    <pre><code class="language-bash">kubectl rollout status daemonset/&lt;name&gt; -n &lt;namespace&gt;
+kubectl rollout history daemonset/&lt;name&gt; -n &lt;namespace&gt;
+kubectl get pods -n &lt;namespace&gt; -l app=&lt;label-value&gt; \
+  -L controller-revision-hash</code></pre>
+    <p>Check <code>maxUnavailable</code>, Pod readiness, and whether old Pods can terminate. For a bad release, roll back after confirming the earlier revision is safe:</p>
+    <pre><code class="language-bash">kubectl rollout undo daemonset/&lt;name&gt; -n &lt;namespace&gt;
+kubectl rollout status daemonset/&lt;name&gt; -n &lt;namespace&gt;</code></pre>
+
+    <h2 id="prevention">Production Prevention Checklist</h2>
+    <ul>
+      <li>Set realistic resource requests so every targeted node can schedule the agent.</li>
+      <li>Use readiness and liveness probes that test meaningful, local health.</li>
+      <li>Build and verify multi-architecture images when node architectures differ.</li>
+      <li>Keep node selectors and tolerations narrow and documented.</li>
+      <li>Alert when desired, ready, and available counts diverge.</li>
+      <li>Canary changes on a labeled node pool before a cluster-wide rollout.</li>
+      <li>Test host path, kernel, runtime, and permission assumptions against every node image.</li>
+      <li>Use a PodDisruptionBudget only where it matches the operational need; it does not fix unhealthy Pods.</li>
+    </ul>
+
+    <div class="callout"><p><strong>Useful mental model:</strong> missing DaemonSet Pods usually point to eligibility or scheduling. Existing but unhealthy Pods usually point to startup, readiness, host dependencies, or permissions.</p></div>
+    <a class="back-link" href="./index.html">Back to Kubernetes blog</a>
+  </div></section>
+</main>
+<footer><div class="container">© 2026 Mayank Yadav • Built with a platform engineering mindset</div></footer>
+</body>
+</html>

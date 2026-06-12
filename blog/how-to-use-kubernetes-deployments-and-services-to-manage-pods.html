@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to Use Kubernetes Deployments and Services to Manage Pods | Mayank Yadav</title>
+  <meta name="description" content="A detailed guide to managing Kubernetes Pods with Deployments and Services, including scaling, rolling updates, stable networking, troubleshooting, and production practices." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<header><div class="container"><nav>
+  <a href="../index.html" class="brand">Mayank<span>.dev</span></a>
+  <div class="nav-links"><a href="../index.html#featured-work">Case Studies</a><a href="../index.html#focus">Focus Areas</a><a href="./index.html">Blog</a><a href="../index.html#contact">Contact</a></div>
+</nav></div></header>
+<main>
+  <section class="hero"><div class="container">
+    <div class="eyebrow">Kubernetes Workloads</div>
+    <h1>How to Use Kubernetes Deployments and Services to Manage Pods</h1>
+    <p class="lede">Pods run your containers, but they are replaceable and their IP addresses change. Deployments keep the right Pods running and roll out new versions. Services give those Pods a stable network endpoint.</p>
+    <div class="meta"><span>Published June 12, 2026</span><span>15 min read</span><span>Kubernetes</span></div>
+  </div></section>
+
+  <section class="content"><div class="container article-body">
+    <div class="callout"><p><strong>Core pattern:</strong> clients send traffic to a Service, the Service selects ready Pods by label, and a Deployment continuously reconciles those Pods to the desired replica count and template.</p></div>
+    <div class="card"><h2>Table of Contents</h2><ul class="toc">
+      <li><a href="#roles">Pods, Deployments, and Services</a></li>
+      <li><a href="#build">Build a Complete Application</a></li>
+      <li><a href="#operate">Scale and Update It</a></li>
+      <li><a href="#troubleshoot">Troubleshooting</a></li>
+      <li><a href="#production">Production Practices</a></li>
+    </ul></div>
+
+    <h2 id="roles">Pods, Deployments, and Services</h2>
+    <p>A Pod is the smallest Kubernetes workload unit. It contains one or more tightly coupled containers that share networking and volumes. Creating standalone Pods is useful for experiments, but it is rarely the right way to run a long-lived stateless application.</p>
+    <p>A Deployment declares a desired state for replicated Pods. It creates and manages ReplicaSets, replaces failed Pods, scales the application, and performs rolling updates. A Service selects Pods using labels and exposes them through a stable DNS name and virtual IP.</p>
+    <ul>
+      <li><strong>Deployment:</strong> manages lifecycle, replicas, updates, and rollback.</li>
+      <li><strong>Pod:</strong> runs the application containers.</li>
+      <li><strong>Service:</strong> provides discovery and load balancing across ready matching Pods.</li>
+    </ul>
+
+    <h2 id="build">Build a Complete Application</h2>
+    <h3>1. Create a Deployment</h3>
+    <p>This example runs three NGINX Pods. The Deployment selector must match the labels in the Pod template and cannot be changed after creation.</p>
+    <pre><code class="language-yaml">apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: default
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: web
+          image: nginx:1.27
+          ports:
+            - name: http
+              containerPort: 80
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10</code></pre>
+
+    <h3>2. Create a Service</h3>
+    <p>The Service selector matches <code>app: web</code>. Clients connect to port <code>80</code>, and the Service forwards traffic to the named container port <code>http</code>.</p>
+    <pre><code class="language-yaml">apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: web
+  ports:
+    - name: http
+      port: 80
+      targetPort: http</code></pre>
+
+    <h3>3. Apply and verify the manifests</h3>
+    <pre><code class="language-bash">kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml
+kubectl rollout status deployment/web
+kubectl get deployment,replicaset,pods,service
+kubectl get endpointslices -l kubernetes.io/service-name=web</code></pre>
+    <p>EndpointSlices should contain the IP addresses of ready Pods. Kubernetes DNS also creates the name <code>web</code> for callers in the same namespace and <code>web.default.svc.cluster.local</code> for the fully qualified name.</p>
+
+    <h3>4. Test from inside the cluster</h3>
+    <pre><code class="language-bash">kubectl run curl-test --rm -it \
+  --image=curlimages/curl --restart=Never -- \
+  curl http://web</code></pre>
+    <p>A ClusterIP Service is reachable only inside the cluster. For external HTTP traffic, place an Ingress or Gateway in front of it. A <code>LoadBalancer</code> Service is another option when a dedicated external load balancer is appropriate.</p>
+
+    <h2 id="operate">Scale and Update It</h2>
+    <h3>Scale the Deployment</h3>
+    <pre><code class="language-bash">kubectl scale deployment/web --replicas=5
+kubectl get pods -l app=web -w</code></pre>
+    <p>The Service automatically discovers newly ready Pods because they carry the matching label. Removing replicas also requires no Service change.</p>
+
+    <h3>Roll out a new image</h3>
+    <pre><code class="language-bash">kubectl set image deployment/web web=nginx:1.28
+kubectl rollout status deployment/web
+kubectl rollout history deployment/web</code></pre>
+    <p>The Deployment creates a new ReplicaSet and gradually replaces old Pods according to <code>maxSurge</code> and <code>maxUnavailable</code>. Readiness probes prevent traffic from reaching a new Pod before it is ready.</p>
+
+    <h3>Pause, resume, or roll back</h3>
+    <pre><code class="language-bash">kubectl rollout pause deployment/web
+kubectl rollout resume deployment/web
+kubectl rollout undo deployment/web
+kubectl rollout status deployment/web</code></pre>
+    <p>Rollback restores a previous Pod template. It does not automatically reverse changes to external dependencies, databases, ConfigMaps, or Secrets, so application releases still need compatibility planning.</p>
+
+    <h2 id="troubleshoot">Troubleshooting</h2>
+    <h3>The Deployment does not reach its desired replicas</h3>
+    <pre><code class="language-bash">kubectl describe deployment web
+kubectl get replicaset
+kubectl get pods -l app=web -o wide
+kubectl describe pod &lt;pod-name&gt;</code></pre>
+    <p>Look for unschedulable Pods, admission rejection, image pull failures, resource quota limits, missing configuration, and crash loops. Deployment conditions such as <code>Progressing</code> and <code>Available</code> summarize rollout health.</p>
+
+    <h3>The Service has no endpoints</h3>
+    <pre><code class="language-bash">kubectl get pods --show-labels
+kubectl describe service web
+kubectl get endpointslices -l kubernetes.io/service-name=web</code></pre>
+    <p>The Service selector may not match the Pod labels, or every matching Pod may be unready. Compare selectors exactly, including spelling and namespace. Services cannot select Pods across namespaces.</p>
+
+    <h3>The Service has endpoints, but connections fail</h3>
+    <p>Verify <code>targetPort</code>, the application's listening port, and its bind address. The process must listen on the Pod interface, usually <code>0.0.0.0</code>, rather than only <code>127.0.0.1</code>. Then check NetworkPolicies and application logs.</p>
+    <pre><code class="language-bash">kubectl exec &lt;pod-name&gt; -- curl -v http://localhost:80
+kubectl logs &lt;pod-name&gt;
+kubectl get networkpolicy</code></pre>
+
+    <h3>The rollout is stuck</h3>
+    <p>A failing readiness probe, image pull error, insufficient capacity, or overly restrictive rollout strategy can stop progress. Inspect the newest ReplicaSet and Pods before deciding whether to fix forward or roll back.</p>
+    <pre><code class="language-bash">kubectl rollout status deployment/web
+kubectl describe deployment web
+kubectl get replicasets --sort-by=.metadata.creationTimestamp</code></pre>
+
+    <h2 id="production">Production Practices</h2>
+    <ul>
+      <li>Use Deployments for stateless applications; use StatefulSets when stable identity or ordered storage behavior is required.</li>
+      <li>Use immutable image tags or digests so a rollout is reproducible.</li>
+      <li>Set resource requests from measured usage and limits with application behavior in mind.</li>
+      <li>Use readiness probes to control traffic and liveness probes only for recoverable deadlocks.</li>
+      <li>Add a startup probe when slow startup would otherwise trigger liveness failures.</li>
+      <li>Use PodDisruptionBudgets and topology spread constraints for availability during disruptions.</li>
+      <li>Use HorizontalPodAutoscaler when workload demand varies and suitable metrics exist.</li>
+      <li>Keep stable labels for Service selection and separate labels used only for release metadata.</li>
+    </ul>
+
+    <div class="callout"><p><strong>Rule of thumb:</strong> manage stateless Pods through a Deployment and send traffic through a Service. Directly managing Pod names or IP addresses creates fragile operations.</p></div>
+    <a class="back-link" href="./index.html">Back to Kubernetes blog</a>
+  </div></section>
+</main>
+<footer><div class="container">© 2026 Mayank Yadav • Built with a platform engineering mindset</div></footer>
+</body>
+</html>
