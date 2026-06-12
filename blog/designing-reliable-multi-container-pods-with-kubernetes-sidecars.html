@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Designing Reliable Multi-Container Pods with Kubernetes Sidecars | Mayank Yadav</title>
+  <meta name="description" content="A practical Kubernetes sidecar guide covering native sidecars, multi-container Pod architecture, shared networking and volumes, startup ordering, resource sizing, failure behavior, and design tradeoffs." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<header><div class="container"><nav>
+  <a href="../index.html" class="brand">Mayank<span>.dev</span></a>
+  <div class="nav-links"><a href="../index.html#featured-work">Case Studies</a><a href="../index.html#focus">Focus Areas</a><a href="./index.html">Blog</a><a href="../index.html#contact">Contact</a></div>
+</nav></div></header>
+<main>
+  <section class="hero"><div class="container">
+    <div class="eyebrow">Kubernetes Architecture</div>
+    <h1>Designing Reliable Multi-Container Pods with Kubernetes Sidecars</h1>
+    <p class="lede">A sidecar extends an application without becoming part of its main business logic. The pattern is powerful for proxies, log processing, configuration, and local agents, but it also couples lifecycle, scaling, resources, and failure behavior.</p>
+    <div class="meta"><span>Published June 12, 2026</span><span>17 min read</span><span>Kubernetes</span></div>
+  </div></section>
+
+  <section class="content"><div class="container article-body">
+    <div class="callout"><p><strong>Design rule:</strong> place containers in one Pod only when they must share fate, network identity, scheduling, or local volumes. If they need independent scaling, deployment, ownership, or availability, use separate workloads and connect them through a Service.</p></div>
+    <div class="card"><h2>Table of Contents</h2><ul class="toc">
+      <li><a href="#model">What a Sidecar Changes</a></li>
+      <li><a href="#architectures">Common Sidecar Architecture Designs</a></li>
+      <li><a href="#native-sidecars">Native Sidecar Containers</a></li>
+      <li><a href="#operations">Resources, Health, and Failure Behavior</a></li>
+      <li><a href="#decision">When Not to Use a Sidecar</a></li>
+      <li><a href="#troubleshooting">Troubleshooting Multi-Container Pods</a></li>
+    </ul></div>
+
+    <h2 id="model">What a Sidecar Changes</h2>
+    <p>Containers in the same Pod are scheduled onto the same node and share one Pod IP. They can communicate over <code>localhost</code> and mount the same Pod volumes. They do not share filesystems or processes by default, and each container has its own image, resources, security context, health checks, and logs.</p>
+    <pre><code class="language-text">Pod
++---------------------------------------------------+
+| Shared Pod IP, localhost, lifecycle, and volumes  |
+|                                                   |
+|  +----------------+       +-------------------+   |
+|  | application    | <---> | sidecar           |   |
+|  | business logic |       | supporting logic  |   |
+|  +----------------+       +-------------------+   |
++---------------------------------------------------+</code></pre>
+    <p>The scheduler places the entire Pod based on combined resource requirements. The replica count also applies to the whole Pod. Scaling the application from three to ten replicas creates ten copies of every sidecar.</p>
+
+    <h2 id="architectures">Common Sidecar Architecture Designs</h2>
+    <h3>Design 1: Local network proxy</h3>
+    <p>A proxy sidecar handles outbound or inbound networking while the application talks to <code>localhost</code>. This can centralize TLS, authentication, retries, or protocol translation.</p>
+    <pre><code class="language-text">External caller
+      |
+      v
++---------------------- Pod ----------------------+
+| proxy sidecar :8443 --> application :8080       |
+|                                                  |
+| application --> localhost:9000 --> proxy sidecar |
++--------------------------------------------------+
+                          |
+                          v
+                    external service</code></pre>
+    <p>This design keeps networking behavior close to the application, but proxy CPU, memory, startup, health, and failure behavior now directly affect every application replica.</p>
+
+    <h3>Design 2: Shared-volume log processor</h3>
+    <p>The application writes files to a shared volume and the sidecar tails or transforms them. Prefer writing ordinary application logs to stdout when possible because Kubernetes logging systems already understand container output. Use a file-processing sidecar only when the application or format requires it.</p>
+    <pre><code class="language-text">application container
+      |
+      | writes files
+      v
+shared emptyDir volume
+      |
+      | tails and transforms
+      v
+log processor sidecar --> log destination</code></pre>
+
+    <h3>Design 3: Local content or configuration synchronizer</h3>
+    <p>A sidecar periodically fetches content into a shared volume while the main container serves or consumes it. This separates synchronization tooling from the application image.</p>
+    <pre><code class="language-text">source repository or object storage
+              |
+              v
+       sync sidecar
+              |
+              v
+       shared volume
+              |
+              v
+       application container</code></pre>
+    <p>Define what happens when synchronization fails, how partial updates are avoided, and whether the application can safely use older content.</p>
+
+    <h3>Design 4: Local observability helper</h3>
+    <p>A helper may expose metrics, translate a legacy statistics endpoint, or collect application-specific telemetry. If the helper can serve many workloads independently, a DaemonSet or shared service may be more efficient than one sidecar per Pod.</p>
+
+    <h2 id="native-sidecars">Native Sidecar Containers</h2>
+    <p>Kubernetes supports sidecars declared in <code>initContainers</code> with <code>restartPolicy: Always</code>. Unlike an ordinary init container, a native sidecar continues running after startup. It starts before application containers and is stopped after them, which makes lifecycle ordering explicit.</p>
+    <pre><code class="language-yaml">apiVersion: v1
+kind: Pod
+metadata:
+  name: web-with-log-sidecar
+spec:
+  initContainers:
+    - name: log-processor
+      image: registry.example.com/platform/log-processor:2.1
+      restartPolicy: Always
+      volumeMounts:
+        - name: logs
+          mountPath: /var/log/app
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          memory: 128Mi
+      readinessProbe:
+        exec:
+          command: ["test", "-f", "/tmp/ready"]
+  containers:
+    - name: web
+      image: registry.example.com/shop/web:4.8
+      volumeMounts:
+        - name: logs
+          mountPath: /var/log/app
+      resources:
+        requests:
+          cpu: 250m
+          memory: 256Mi
+        limits:
+          memory: 512Mi
+  volumes:
+    - name: logs
+      emptyDir: {}</code></pre>
+    <p>An ordinary sidecar can also be placed in the regular <code>containers</code> list. That pattern is still useful, but native sidecars provide stronger startup and shutdown ordering semantics. Verify that the Kubernetes versions and tooling used by your platform support the native sidecar fields before adopting them.</p>
+
+    <h3>Init container, sidecar, or regular application container?</h3>
+    <ul>
+      <li><strong>Ordinary init container:</strong> runs to completion before application containers start.</li>
+      <li><strong>Native sidecar:</strong> starts during initialization, keeps running, and stops after application containers.</li>
+      <li><strong>Regular container:</strong> starts alongside other application containers without native sidecar ordering.</li>
+    </ul>
+
+    <h2 id="operations">Resources, Health, and Failure Behavior</h2>
+    <h3>Size the complete Pod</h3>
+    <p>A lightweight helper multiplied across hundreds of replicas can become a significant cluster cost. Measure each container independently and the Pod as a whole. Sidecars need their own requests and limits so scheduling and capacity planning reflect reality.</p>
+    <pre><code class="language-bash">kubectl top pod &lt;pod-name&gt; --containers
+kubectl get pod &lt;pod-name&gt; \
+  -o jsonpath='{.spec.containers[*].resources}'</code></pre>
+
+    <h3>Define readiness around user-visible behavior</h3>
+    <p>If an application cannot serve safely without its proxy or synchronization sidecar, readiness should reflect that dependency. If the sidecar is optional telemetry, do not make an observability outage remove a healthy application from service.</p>
+
+    <h3>Plan startup and shutdown</h3>
+    <p>Startup probes and native sidecar ordering can protect slow dependencies. During shutdown, allow the application to stop accepting work, finish requests, flush local output, and then let the sidecar complete its final work. Test termination rather than assuming a grace period is sufficient.</p>
+
+    <h3>Limit shared privileges</h3>
+    <p>A sidecar sharing local files or traffic can become a path into the main application. Give each container the least privileges it needs, use read-only mounts where possible, avoid broad process sharing, and do not assume a sidecar from another team is harmless because it runs in the same Pod.</p>
+    <pre><code class="language-yaml">volumeMounts:
+  - name: config
+    mountPath: /etc/app-config
+    readOnly: true
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  capabilities:
+    drop: ["ALL"]</code></pre>
+
+    <h2 id="decision">When Not to Use a Sidecar</h2>
+    <p>A sidecar is the wrong boundary when the supporting component should scale or fail independently. Use a Deployment and Service, DaemonSet, managed platform service, or library instead when those boundaries fit better.</p>
+    <pre><code class="language-text">Use one Pod when:
+- containers require localhost communication
+- containers require the same local volume
+- containers must be scheduled and replaced together
+
+Use separate workloads when:
+- components need different replica counts
+- components release on independent schedules
+- one component serves many applications
+- failures should not share fate
+- ownership and security boundaries differ</code></pre>
+    <p>For example, a node-level log collector normally belongs in a DaemonSet, not as a sidecar in every Pod. A shared authentication service belongs behind a Service when it must scale independently. A small protocol adapter tightly coupled to one application may be a strong sidecar candidate.</p>
+
+    <h2 id="troubleshooting">Troubleshooting Multi-Container Pods</h2>
+    <h3>Inspect every container state</h3>
+    <pre><code class="language-bash">kubectl get pod &lt;pod-name&gt; -o wide
+kubectl describe pod &lt;pod-name&gt;
+kubectl get pod &lt;pod-name&gt; \
+  -o jsonpath='{range .status.containerStatuses[*]}{.name}{" ready="}{.ready}{" restarts="}{.restartCount}{"\n"}{end}'
+kubectl get pod &lt;pod-name&gt; \
+  -o jsonpath='{range .status.initContainerStatuses[*]}{.name}{" ready="}{.ready}{" restarts="}{.restartCount}{"\n"}{end}'</code></pre>
+
+    <h3>Always name the container when reading logs</h3>
+    <pre><code class="language-bash">kubectl logs &lt;pod-name&gt; -c &lt;container-name&gt;
+kubectl logs &lt;pod-name&gt; -c &lt;container-name&gt; --previous
+kubectl logs &lt;pod-name&gt; --all-containers --prefix</code></pre>
+
+    <h3>Check shared networking and volumes from both sides</h3>
+    <pre><code class="language-bash">kubectl exec &lt;pod-name&gt; -c application -- curl -v http://localhost:9000/health
+kubectl exec &lt;pod-name&gt; -c sidecar -- ls -la /shared/path
+kubectl exec &lt;pod-name&gt; -c application -- ls -la /shared/path</code></pre>
+    <p>Confirm that both containers mount the same named volume at the expected paths, agree on file ownership, and use the intended localhost ports. Port conflicts happen because all containers in a Pod share one network namespace.</p>
+
+    <h3>Look for sidecar-driven rollout failures</h3>
+    <p>A broken sidecar image, readiness probe, admission policy, or resource request can prevent the entire Pod from becoming ready. During a rollout, compare the new Pod template with the previous revision and inspect every container rather than only the main application.</p>
+
+    <div class="callout"><p><strong>Architecture test:</strong> ask whether the application and helper should always start, scale, move, fail, and be secured together. If any answer is no, a separate workload may be the cleaner design.</p></div>
+    <a class="back-link" href="./index.html">Back to Kubernetes blog</a>
+  </div></section>
+</main>
+<footer><div class="container">© 2026 Mayank Yadav • Built with a platform engineering mindset</div></footer>
+</body>
+</html>

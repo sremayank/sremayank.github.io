@@ -6,7 +6,7 @@
   <title>Kubernetes Blog | Mayank Yadav</title>
   <meta
     name="description"
-    content="Detailed Kubernetes guides by Mayank Yadav covering workloads, Services, storage, namespaces, troubleshooting, and production operations."
+    content="Detailed Kubernetes guides by Mayank Yadav covering networking, security, workload architecture, storage, troubleshooting, and production operations."
   />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -37,11 +37,38 @@
       <div class="eyebrow">Kubernetes Operations • Troubleshooting • Platform Engineering</div>
       <h1>Kubernetes Blog</h1>
       <p class="lede">
-        Practical Kubernetes guides for managing workloads, connecting storage, protecting clusters, and
+        Practical Kubernetes guides for designing workloads, tracing traffic, protecting clusters, and
         troubleshooting production-style environments.
       </p>
 
       <div class="post-grid">
+        <a class="card post-card" href="./from-service-vip-to-pod-tracing-traffic-through-kubernetes.html">
+          <h2>From Service VIP to Pod: Tracing Traffic Through Kubernetes</h2>
+          <p>
+            Follow traffic across external load balancers, routing layers, Services, EndpointSlices, and
+            the cluster network dataplane.
+          </p>
+          <span class="read-more">Read guide</span>
+        </a>
+
+        <a class="card post-card" href="./building-security-into-every-layer-of-a-kubernetes-cluster.html">
+          <h2>Building Security Into Every Layer of a Kubernetes Cluster</h2>
+          <p>
+            Build defense in depth with identity, admission controls, workload hardening, network policy,
+            supply-chain controls, and detection.
+          </p>
+          <span class="read-more">Read guide</span>
+        </a>
+
+        <a class="card post-card" href="./designing-reliable-multi-container-pods-with-kubernetes-sidecars.html">
+          <h2>Designing Reliable Multi-Container Pods with Kubernetes Sidecars</h2>
+          <p>
+            Compare sidecar architecture patterns and design reliable startup, shared resources, health,
+            security, and failure behavior.
+          </p>
+          <span class="read-more">Read guide</span>
+        </a>
+
         <a class="card post-card" href="./how-to-troubleshoot-unhealthy-kubernetes-daemonsets.html">
           <h2>How to Troubleshoot Unhealthy Kubernetes DaemonSets</h2>
           <p>
